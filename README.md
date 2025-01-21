@@ -1,6 +1,6 @@
 # VidCard 🎥
 
-A simple web application that captures and hosts YouTube videos metadata so that whn you share a link on social media, you get a clean card with rich metadata that is consistent across platforms. Perfect for content creators, social media managers, or anyone who needs to share YouTube videos with enhanced presentation and engagement tracking.
+A simple web application that captures and hosts YouTube video metadata so that when you share a link on social media, you get a clean card with rich metadata that is consistent across platforms. Perfect for content creators, social media managers, or anyone who needs to share YouTube videos with enhanced presentation and engagement tracking.
 
 ## Features ✨
 
@@ -56,4 +56,4 @@ Feel free to submit issues and pull requests to help improve this tool.
 
 ## License 📄
 
-[Add your license information here]
+This project is licensed under the MIT License. See the LICENSE file for details.
