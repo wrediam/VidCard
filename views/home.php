@@ -61,7 +61,7 @@
         <div class="max-w-md mx-auto">
             <div class="bg-white rounded-lg shadow-xl border border-slate-200 p-8">
                 <div id="emailStep" class="space-y-6">
-                    <div>
+                    <div class="text-center">
                         <h2 class="text-2xl font-semibold mb-2">Get Started</h2>
                         <p class="text-slate-600 text-sm">Enter your email to receive a login code</p>
                     </div>
