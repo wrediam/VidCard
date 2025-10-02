@@ -252,7 +252,45 @@
                 <p class="text-sm text-slate-600">Instant redirects to YouTube while capturing visit data</p>
             </div>
         </div>
+        
+        <!-- Footer -->
+        <footer class="text-center py-8 content-wrapper">
+            <div class="flex items-center justify-center gap-6 text-sm text-slate-600 mb-4">
+                <a href="/terms" class="hover:text-slate-900 transition">Terms of Service</a>
+                <span>•</span>
+                <a href="/privacy" class="hover:text-slate-900 transition">Privacy Policy</a>
+            </div>
+            <p class="text-xs text-slate-500">© <?php echo date('Y'); ?> VidCard. All rights reserved.</p>
+        </footer>
     </div>
+
+    <!-- Cookie Consent Banner -->
+    <div id="cookieConsent" class="hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg z-50">
+        <div class="container mx-auto px-4 py-4 max-w-4xl">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+                <p class="text-sm text-slate-700">
+                    We use cookies to enhance your experience and analyze usage. By continuing to use VidCard, you agree to our use of cookies.
+                    <a href="/privacy" class="text-slate-900 underline hover:text-slate-700">Learn more</a>
+                </p>
+                <button onclick="acceptCookies()" class="px-6 py-2 bg-slate-900 text-white rounded-md hover:bg-slate-800 transition whitespace-nowrap">
+                    Accept
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Cookie Consent
+        function acceptCookies() {
+            localStorage.setItem('cookieConsent', 'true');
+            document.getElementById('cookieConsent').classList.add('hidden');
+        }
+        
+        // Show cookie banner if not accepted
+        if (!localStorage.getItem('cookieConsent')) {
+            document.getElementById('cookieConsent').classList.remove('hidden');
+        }
+    </script>
 
     <script>
         let userEmail = '';

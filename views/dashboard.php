@@ -138,6 +138,17 @@
                     </div>
                 </div>
             </main>
+            
+            <!-- Footer -->
+            <footer class="border-t border-slate-200 py-3 px-6">
+                <div class="flex items-center justify-center gap-4 text-xs text-slate-500">
+                    <a href="/terms" class="hover:text-slate-700 transition">Terms</a>
+                    <span>•</span>
+                    <a href="/privacy" class="hover:text-slate-700 transition">Privacy</a>
+                    <span>•</span>
+                    <span>© <?php echo date('Y'); ?> VidCard</span>
+                </div>
+            </footer>
         </div>
     </div>
 

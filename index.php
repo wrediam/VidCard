@@ -193,5 +193,17 @@ if ($path === '/dashboard' || $path === '/dashboard/') {
     exit;
 }
 
+// Route: Terms of Service
+if ($path === '/terms' || $path === '/terms/') {
+    include 'views/terms.php';
+    exit;
+}
+
+// Route: Privacy Policy
+if ($path === '/privacy' || $path === '/privacy/') {
+    include 'views/privacy.php';
+    exit;
+}
+
 // Route: Homepage
 include 'views/home.php';
