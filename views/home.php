@@ -120,6 +120,12 @@
                     
                     <div id="codeError" class="text-sm text-red-600 hidden"></div>
                     
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <p class="text-xs text-blue-800">
+                            <strong>Note:</strong> The email may take up to 3 minutes to arrive. Please check your spam folder if you don't see it in your inbox.
+                        </p>
+                    </div>
+                    
                     <div class="text-center">
                         <button 
                             onclick="sendCode()" 
