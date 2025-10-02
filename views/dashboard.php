@@ -222,15 +222,99 @@
                 </div>
             </div>
             <div class="sticky bottom-0 bg-slate-50 border-t border-slate-200 p-4 rounded-b-lg flex justify-between">
-                <button 
-                    onclick="copyTranscript()"
-                    id="copyTranscriptBtn"
-                    class="px-4 py-2 bg-slate-900 text-white rounded-md font-medium hover:bg-slate-800 transition"
-                >
-                    Copy Transcript
-                </button>
+                <div class="flex gap-2">
+                    <button 
+                        onclick="copyTranscript()"
+                        id="copyTranscriptBtn"
+                        class="px-4 py-2 bg-slate-900 text-white rounded-md font-medium hover:bg-slate-800 transition"
+                    >
+                        Copy Transcript
+                    </button>
+                    <button 
+                        onclick="openAITools()"
+                        id="aiToolsBtn"
+                        class="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md font-medium hover:from-purple-700 hover:to-blue-700 transition flex items-center gap-2"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        AI Tools
+                    </button>
+                </div>
                 <button 
                     onclick="closeTranscriptModal()"
+                    class="px-4 py-2 border border-slate-300 text-slate-700 rounded-md font-medium hover:bg-slate-50 transition"
+                >
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Tools Modal -->
+    <div id="aiToolsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center overflow-y-auto p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8">
+            <div class="sticky top-0 bg-gradient-to-r from-purple-600 to-blue-600 border-b border-purple-700 p-6 flex items-center justify-between rounded-t-lg z-10">
+                <div class="flex items-center gap-3">
+                    <button onclick="backToTranscript()" class="text-white hover:text-purple-100 transition">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </button>
+                    <h3 class="text-2xl font-bold text-white flex items-center gap-2">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        AI Tools
+                    </h3>
+                </div>
+                <button onclick="closeAIToolsModal()" class="text-white hover:text-purple-100 transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6 max-h-[70vh] overflow-y-auto">
+                <div id="aiToolsContent">
+                    <div class="text-center py-8">
+                        <div class="mb-6">
+                            <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-100 to-blue-100 rounded-full mb-4">
+                                <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
+                                </svg>
+                            </div>
+                            <h4 class="text-xl font-semibold text-slate-900 mb-2">Generate Social Media Posts</h4>
+                            <p class="text-slate-600 max-w-md mx-auto">Use AI to create 5 engaging post suggestions based on your video transcript. Perfect for promoting your content!</p>
+                        </div>
+                        <button 
+                            onclick="generatePostSuggestions()"
+                            id="generatePostsBtn"
+                            class="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition shadow-lg hover:shadow-xl"
+                        >
+                            Generate Post Suggestions
+                        </button>
+                    </div>
+                    <div id="postSuggestionsContainer" class="hidden">
+                        <div class="mb-4 flex items-center justify-between">
+                            <h4 class="text-lg font-semibold text-slate-900">Your Post Suggestions</h4>
+                            <button 
+                                onclick="generatePostSuggestions()"
+                                id="regeneratePostsBtn"
+                                class="px-4 py-2 text-sm bg-slate-100 text-slate-700 rounded-md font-medium hover:bg-slate-200 transition flex items-center gap-2"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                                Regenerate
+                            </button>
+                        </div>
+                        <div id="postSuggestionsList" class="space-y-3"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="sticky bottom-0 bg-slate-50 border-t border-slate-200 p-4 rounded-b-lg flex justify-end">
+                <button 
+                    onclick="closeAIToolsModal()"
                     class="px-4 py-2 border border-slate-300 text-slate-700 rounded-md font-medium hover:bg-slate-50 transition"
                 >
                     Close
@@ -721,8 +805,10 @@
 
         // Transcript functionality
         let currentTranscript = '';
+        let currentVideoId = '';
 
         async function viewTranscript(videoId, hasTranscript) {
+            currentVideoId = videoId;
             document.getElementById('transcriptModal').classList.remove('hidden');
             document.body.style.overflow = 'hidden';
             
@@ -818,6 +904,160 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        // AI Tools functionality
+        function openAITools() {
+            if (!currentTranscript) {
+                alert('Please load the transcript first');
+                return;
+            }
+            
+            // Hide transcript modal and show AI tools modal
+            document.getElementById('transcriptModal').classList.add('hidden');
+            document.getElementById('aiToolsModal').classList.remove('hidden');
+            
+            // Reset AI tools content to initial state
+            document.getElementById('postSuggestionsContainer').classList.add('hidden');
+            document.getElementById('aiToolsContent').querySelector('.text-center').classList.remove('hidden');
+        }
+
+        function closeAIToolsModal() {
+            document.getElementById('aiToolsModal').classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+
+        function backToTranscript() {
+            document.getElementById('aiToolsModal').classList.add('hidden');
+            document.getElementById('transcriptModal').classList.remove('hidden');
+        }
+
+        async function generatePostSuggestions() {
+            if (!currentVideoId) {
+                alert('Video ID not found');
+                return;
+            }
+
+            const btn = document.getElementById('generatePostsBtn');
+            const regenerateBtn = document.getElementById('regeneratePostsBtn');
+            const initialView = document.getElementById('aiToolsContent').querySelector('.text-center');
+            const suggestionsContainer = document.getElementById('postSuggestionsContainer');
+            
+            // Disable buttons and show loading state
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `
+                    <div class="flex items-center justify-center gap-2">
+                        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Generating...</span>
+                    </div>
+                `;
+            }
+            if (regenerateBtn) {
+                regenerateBtn.disabled = true;
+            }
+
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        action: 'generate_post_suggestions',
+                        video_id: currentVideoId 
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.suggestions) {
+                    // Hide initial view and show suggestions
+                    if (initialView) initialView.classList.add('hidden');
+                    suggestionsContainer.classList.remove('hidden');
+                    
+                    // Render suggestions
+                    renderPostSuggestions(data.suggestions);
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to generate post suggestions'));
+                }
+            } catch (error) {
+                console.error('Generate error:', error);
+                alert('Network error. Please try again.');
+            } finally {
+                // Re-enable buttons
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'Generate Post Suggestions';
+                }
+                if (regenerateBtn) {
+                    regenerateBtn.disabled = false;
+                }
+            }
+        }
+
+        function renderPostSuggestions(suggestions) {
+            const list = document.getElementById('postSuggestionsList');
+            
+            list.innerHTML = suggestions.map((suggestion, index) => `
+                <div class="bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 rounded-lg p-4 hover:shadow-md transition">
+                    <div class="flex items-start justify-between gap-3 mb-3">
+                        <div class="flex items-center gap-2">
+                            <div class="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-500 text-white rounded-full font-bold text-sm">
+                                ${index + 1}
+                            </div>
+                            <span class="text-xs font-medium text-slate-500">Post Suggestion</span>
+                        </div>
+                        <button 
+                            onclick="copyPostSuggestion(${index}, '${escapeForAttribute(suggestion.post_text)}')"
+                            id="copyBtn${index}"
+                            class="px-3 py-1.5 bg-white border border-slate-300 text-slate-700 rounded-md text-sm font-medium hover:bg-slate-50 transition flex items-center gap-1.5"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                            </svg>
+                            Copy
+                        </button>
+                    </div>
+                    <p class="text-slate-700 leading-relaxed">${escapeHtml(suggestion.post_text)}</p>
+                </div>
+            `).join('');
+        }
+
+        function copyPostSuggestion(index, text) {
+            // Decode the escaped text
+            const textarea = document.createElement('textarea');
+            textarea.innerHTML = text;
+            const decodedText = textarea.value;
+            
+            navigator.clipboard.writeText(decodedText).then(() => {
+                const btn = document.getElementById(`copyBtn${index}`);
+                const originalHTML = btn.innerHTML;
+                
+                btn.innerHTML = `
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Copied!
+                `;
+                btn.classList.add('bg-green-50', 'border-green-500', 'text-green-700');
+                btn.classList.remove('bg-white', 'border-slate-300', 'text-slate-700');
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                    btn.classList.remove('bg-green-50', 'border-green-500', 'text-green-700');
+                    btn.classList.add('bg-white', 'border-slate-300', 'text-slate-700');
+                }, 2000);
+            });
+        }
+
+        function escapeForAttribute(text) {
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/'/g, '&#39;')
+                .replace(/"/g, '&quot;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/\n/g, ' ')
+                .replace(/\r/g, '');
         }
 
         // Delete video functionality

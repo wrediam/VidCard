@@ -318,15 +318,15 @@ curl -X POST <?php echo APP_URL; ?>/api/v1/videos \
                     <div class="mb-4">
                         <h5 class="font-semibold text-slate-800 mb-2">cURL</h5>
                         <div class="bg-slate-900 text-white rounded-lg p-4 font-mono text-xs overflow-x-auto">
-<span class="text-gray-400"># Get all videos</span>
-curl -X GET <?php echo APP_URL; ?>/api/v1/videos \
-  -H <span class="text-yellow-400">"X-API-Key: vk_your_key"</span>
+                            <span class="text-gray-400"># Get all videos</span>
+                            curl -X GET <?php echo APP_URL; ?>/api/v1/videos \
+                            -H <span class="text-yellow-400">"X-API-Key: vk_your_key"</span>
 
-<span class="text-gray-400"># Process a video</span>
-curl -X POST <?php echo APP_URL; ?>/api/v1/videos \
-  -H <span class="text-yellow-400">"X-API-Key: vk_your_key"</span> \
-  -H <span class="text-yellow-400">"Content-Type: application/json"</span> \
-  -d <span class="text-yellow-400">'{"url": "https://youtube.com/watch?v=..."}'</span>
+                            <span class="text-gray-400"># Process a video</span>
+                            curl -X POST <?php echo APP_URL; ?>/api/v1/videos \
+                            -H <span class="text-yellow-400">"X-API-Key: vk_your_key"</span> \
+                            -H <span class="text-yellow-400">"Content-Type: application/json"</span> \
+                            -d <span class="text-yellow-400">'{"url": "https://youtube.com/watch?v=..."}'</span>
                         </div>
                     </div>
 
