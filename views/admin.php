@@ -71,6 +71,60 @@
         </main>
     </div>
 
+    <!-- Delete User Confirmation Modal -->
+    <div id="deleteUserModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="p-6">
+                <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
+                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-semibold text-center mb-2 text-red-600">⚠️ DANGER ZONE</h3>
+                <p class="text-sm font-medium text-slate-900 text-center mb-3">
+                    Delete user <span id="deleteUserEmail" class="font-bold"></span>?
+                </p>
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                    <p class="text-sm text-red-900 font-semibold mb-2">This will permanently delete:</p>
+                    <ul class="text-sm text-red-800 space-y-1">
+                        <li>• The user account</li>
+                        <li>• ALL their videos</li>
+                        <li>• ALL video analytics</li>
+                        <li>• ALL shared links will break</li>
+                    </ul>
+                    <p class="text-sm text-red-900 font-bold mt-3">This action CANNOT be undone!</p>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-2">
+                        Type <span class="font-mono font-bold bg-slate-100 px-1">DELETE</span> to confirm:
+                    </label>
+                    <input 
+                        type="text" 
+                        id="deleteConfirmInput"
+                        class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                        placeholder="Type DELETE here"
+                    />
+                </div>
+                <div class="flex gap-3">
+                    <button 
+                        onclick="closeDeleteUserModal()" 
+                        class="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition font-medium"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        onclick="confirmDeleteUser()" 
+                        id="confirmDeleteUserBtn"
+                        class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled
+                    >
+                        Delete User
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         let selectedUserId = null;
 
@@ -315,17 +369,48 @@
             }
         }
 
-        async function deleteUser(userId, email) {
-            const confirmMessage = `⚠️ DANGER: Delete user "${email}"?\n\nThis will permanently delete:\n• The user account\n• ALL their videos\n• ALL video analytics\n• ALL shared links will break\n\nThis action CANNOT be undone!\n\nType "DELETE" to confirm:`;
+        // Delete user modal state
+        let userToDelete = null;
+
+        function deleteUser(userId, email) {
+            userToDelete = { id: userId, email: email };
+            document.getElementById('deleteUserEmail').textContent = email;
+            document.getElementById('deleteConfirmInput').value = '';
+            document.getElementById('confirmDeleteUserBtn').disabled = true;
+            document.getElementById('deleteUserModal').classList.remove('hidden');
             
-            const confirmation = prompt(confirmMessage);
-            
-            if (confirmation !== 'DELETE') {
-                if (confirmation !== null) {
-                    alert('Deletion cancelled. You must type "DELETE" exactly to confirm.');
-                }
-                return;
+            // Focus the input
+            setTimeout(() => {
+                document.getElementById('deleteConfirmInput').focus();
+            }, 100);
+        }
+
+        function closeDeleteUserModal() {
+            userToDelete = null;
+            document.getElementById('deleteUserModal').classList.add('hidden');
+            document.getElementById('deleteConfirmInput').value = '';
+            document.getElementById('confirmDeleteUserBtn').disabled = true;
+        }
+
+        // Enable delete button when "DELETE" is typed
+        document.getElementById('deleteConfirmInput').addEventListener('input', function(e) {
+            const btn = document.getElementById('confirmDeleteUserBtn');
+            btn.disabled = e.target.value !== 'DELETE';
+        });
+
+        // Allow Enter key to submit
+        document.getElementById('deleteConfirmInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && e.target.value === 'DELETE') {
+                confirmDeleteUser();
             }
+        });
+
+        async function confirmDeleteUser() {
+            if (!userToDelete) return;
+
+            const btn = document.getElementById('confirmDeleteUserBtn');
+            btn.disabled = true;
+            btn.textContent = 'Deleting...';
 
             try {
                 const response = await fetch('/', {
@@ -333,17 +418,24 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         action: 'delete_user',
-                        user_id: userId 
+                        user_id: userToDelete.id 
                     })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    alert(`✅ User "${data.deleted_email}" and all associated data has been permanently deleted.`);
+                    closeDeleteUserModal();
+                    
+                    // Show success message
+                    const successDiv = document.createElement('div');
+                    successDiv.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+                    successDiv.textContent = `✅ User "${data.deleted_email}" deleted successfully`;
+                    document.body.appendChild(successDiv);
+                    setTimeout(() => successDiv.remove(), 3000);
                     
                     // Clear video panel if this user was selected
-                    if (selectedUserId === userId) {
+                    if (selectedUserId === userToDelete.id) {
                         selectedUserId = null;
                         document.getElementById('videosTitle').textContent = 'Select a user';
                         document.getElementById('videosSubtitle').textContent = 'Choose a user from the list to view their videos';
@@ -361,12 +453,23 @@
                     loadUsers();
                 } else {
                     alert('Error: ' + (data.error || 'Failed to delete user'));
+                    btn.disabled = false;
+                    btn.textContent = 'Delete User';
                 }
             } catch (error) {
                 console.error('Delete user error:', error);
                 alert('Network error. Please try again.');
+                btn.disabled = false;
+                btn.textContent = 'Delete User';
             }
         }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeDeleteUserModal();
+            }
+        });
     </script>
 </body>
 </html>
