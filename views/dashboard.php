@@ -31,7 +31,7 @@
         </div>
 
         <!-- Channel Detail Panel -->
-        <div id="channelPanel" class="hidden fixed inset-y-0 left-20 w-80 bg-white border-r border-slate-200 shadow-xl z-40 overflow-y-auto">
+        <div id="channelPanel" class="hidden fixed inset-y-0 left-20 w-96 bg-white border-r border-slate-200 shadow-xl z-40 overflow-y-auto">
             <div class="sticky top-0 bg-white border-b border-slate-200 p-4 flex items-center justify-between">
                 <h2 class="text-lg font-semibold" id="channelPanelTitle">Channel Videos</h2>
                 <button onclick="closeChannelPanel()" class="text-slate-400 hover:text-slate-600">
