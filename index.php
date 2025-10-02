@@ -4,6 +4,21 @@ require_once 'config.php';
 require_once 'auth.php';
 require_once 'video.php';
 
+// Auto-migrate database on first run
+try {
+    $db = getDB();
+    $result = $db->query("SELECT to_regclass('public.users')");
+    $tableExists = $result->fetchColumn();
+    
+    if (!$tableExists) {
+        $sql = file_get_contents(__DIR__ . '/init.sql');
+        $db->exec($sql);
+        error_log('Database schema initialized automatically');
+    }
+} catch (Exception $e) {
+    error_log('Auto-migration check failed: ' . $e->getMessage());
+}
+
 $auth = new Auth();
 $videoService = new Video();
 
