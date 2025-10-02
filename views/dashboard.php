@@ -516,8 +516,29 @@
             .then(data => {
                 if (data.success && data.stats) {
                     const content = document.getElementById('statsContent');
-                    const firstVisit = data.stats.first_visit ? new Date(data.stats.first_visit).toLocaleDateString() : '-';
-                    const lastVisit = data.stats.last_visit ? new Date(data.stats.last_visit).toLocaleString() : '-';
+                    
+                    // Helper function to format dates in local timezone
+                    const formatLocalDate = (dateString) => {
+                        if (!dateString) return '-';
+                        const date = new Date(dateString + 'Z'); // Add Z to treat as UTC
+                        return date.toLocaleDateString();
+                    };
+                    
+                    const formatLocalDateTime = (dateString) => {
+                        if (!dateString) return '-';
+                        const date = new Date(dateString + 'Z'); // Add Z to treat as UTC
+                        return date.toLocaleString('en-US', {
+                            month: 'numeric',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                        });
+                    };
+                    
+                    const firstVisit = formatLocalDate(data.stats.first_visit);
+                    const lastVisit = formatLocalDateTime(data.stats.last_visit);
                     
                     content.innerHTML = `
                         <div class="space-y-6">
@@ -549,7 +570,7 @@
                                                 <div class="flex justify-between items-start gap-4">
                                                     <div class="flex-1">
                                                         <div class="text-sm font-medium text-slate-900">
-                                                            ${new Date(visit.visited_at).toLocaleString()}
+                                                            ${formatLocalDateTime(visit.visited_at)}
                                                         </div>
                                                         <div class="text-xs text-slate-500 mt-1">
                                                             Referrer: ${visit.referrer === 'direct' ? 'Direct visit' : visit.referrer}
