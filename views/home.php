@@ -43,10 +43,92 @@
         body {
             font-family: 'Inter', sans-serif;
         }
+        
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.6;
+            animation: float 20s infinite ease-in-out;
+        }
+        
+        .orb-1 {
+            width: 400px;
+            height: 400px;
+            background: #34b4d9;
+            top: -100px;
+            left: -100px;
+            animation-delay: 0s;
+        }
+        
+        .orb-2 {
+            width: 500px;
+            height: 500px;
+            background: #ac3eb7;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation-delay: -5s;
+        }
+        
+        .orb-3 {
+            width: 350px;
+            height: 350px;
+            background: #3f46d3;
+            bottom: -100px;
+            right: -100px;
+            animation-delay: -10s;
+        }
+        
+        .orb-4 {
+            width: 300px;
+            height: 300px;
+            background: #db4585;
+            top: 20%;
+            right: 10%;
+            animation-delay: -15s;
+        }
+        
+        .orb-5 {
+            width: 450px;
+            height: 450px;
+            background: #fa7b68;
+            bottom: 20%;
+            left: 15%;
+            animation-delay: -7s;
+        }
+        
+        @keyframes float {
+            0%, 100% {
+                transform: translate(0, 0) scale(1);
+            }
+            25% {
+                transform: translate(50px, -50px) scale(1.1);
+            }
+            50% {
+                transform: translate(-30px, 30px) scale(0.9);
+            }
+            75% {
+                transform: translate(40px, 20px) scale(1.05);
+            }
+        }
+        
+        .content-wrapper {
+            position: relative;
+            z-index: 10;
+        }
     </style>
 </head>
-<body class="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
-    <div class="container mx-auto px-4 py-16 max-w-6xl">
+<body class="bg-white min-h-screen overflow-hidden relative">
+    <!-- Animated Gradient Orbs Background -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+        <div class="orb orb-4"></div>
+        <div class="orb orb-5"></div>
+    </div>
+    <div class="container mx-auto px-4 py-16 max-w-6xl content-wrapper">
         <!-- Header -->
         <div class="text-center mb-16">
             <div class="flex items-center justify-center mb-6">
