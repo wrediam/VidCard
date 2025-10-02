@@ -35,6 +35,10 @@ class Video {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (compatible; VidCard/1.0)');
+        curl_setopt($ch, CURLOPT_REFERER, APP_URL);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Origin: ' . APP_URL
+        ]);
         
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
