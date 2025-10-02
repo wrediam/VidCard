@@ -16,6 +16,23 @@ try {
         error_log('Database schema initialized automatically');
     }
     
+    // Add channel_handle column if it doesn't exist (migration for existing databases)
+    try {
+        $db->exec("
+            DO $$ 
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'videos' AND column_name = 'channel_handle'
+                ) THEN
+                    ALTER TABLE videos ADD COLUMN channel_handle VARCHAR(255);
+                END IF;
+            END $$;
+        ");
+    } catch (Exception $e) {
+        error_log('Column migration check: ' . $e->getMessage());
+    }
+    
     // Auto-backfill channel handles for existing videos (runs once per session)
     if (!isset($_SESSION['handles_backfilled'])) {
         $stmt = $db->query("SELECT COUNT(*) FROM videos WHERE channel_handle IS NULL OR channel_handle = ''");
