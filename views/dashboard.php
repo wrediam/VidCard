@@ -907,7 +907,7 @@
         }
 
         // AI Tools functionality
-        function openAITools() {
+        async function openAITools() {
             if (!currentTranscript) {
                 alert('Please load the transcript first');
                 return;
@@ -917,9 +917,46 @@
             document.getElementById('transcriptModal').classList.add('hidden');
             document.getElementById('aiToolsModal').classList.remove('hidden');
             
-            // Reset AI tools content to initial state
-            document.getElementById('postSuggestionsContainer').classList.add('hidden');
-            document.getElementById('aiToolsContent').querySelector('.text-center').classList.remove('hidden');
+            // Try to load existing suggestions
+            await loadExistingPostSuggestions();
+        }
+
+        async function loadExistingPostSuggestions() {
+            if (!currentVideoId) return;
+
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        action: 'get_post_suggestions',
+                        video_id: currentVideoId 
+                    })
+                });
+
+                const data = await response.json();
+
+                const initialView = document.getElementById('aiToolsContent').querySelector('.text-center');
+                const suggestionsContainer = document.getElementById('postSuggestionsContainer');
+
+                if (data.success && data.has_suggestions && data.suggestions) {
+                    // Hide initial view and show existing suggestions
+                    if (initialView) initialView.classList.add('hidden');
+                    suggestionsContainer.classList.remove('hidden');
+                    renderPostSuggestions(data.suggestions);
+                } else {
+                    // Show initial view (no suggestions yet)
+                    if (initialView) initialView.classList.remove('hidden');
+                    suggestionsContainer.classList.add('hidden');
+                }
+            } catch (error) {
+                console.error('Load suggestions error:', error);
+                // Show initial view on error
+                const initialView = document.getElementById('aiToolsContent').querySelector('.text-center');
+                const suggestionsContainer = document.getElementById('postSuggestionsContainer');
+                if (initialView) initialView.classList.remove('hidden');
+                suggestionsContainer.classList.add('hidden');
+            }
         }
 
         function closeAIToolsModal() {
