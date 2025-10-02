@@ -280,4 +280,10 @@ if ($path === '/privacy' || $path === '/privacy/') {
 }
 
 // Route: Homepage
+// Redirect to dashboard if already logged in
+if ($currentUser) {
+    header('Location: /dashboard');
+    exit;
+}
+
 include 'views/home.php';
