@@ -128,9 +128,9 @@
         <div class="orb orb-4"></div>
         <div class="orb orb-5"></div>
     </div>
-    <div class="container mx-auto px-4 py-16 max-w-6xl content-wrapper">
+    <div class="container mx-auto px-4 py-16 max-w-6xl content-wrapper min-h-screen flex flex-col justify-between">
         <!-- Header -->
-        <div class="text-center mb-16">
+        <div class="text-center mb-8">
             <div class="flex items-center justify-center mb-6">
                 <img src="/images/full_logo.png" alt="VidCard" class="h-20 w-auto">
             </div>
@@ -140,7 +140,7 @@
         </div>
 
         <!-- Main Card -->
-        <div class="max-w-md mx-auto">
+        <div class="max-w-md mx-auto flex-shrink-0">
             <div class="bg-white rounded-lg shadow-xl border border-slate-200 p-8">
                 <div id="emailStep" class="space-y-6">
                     <div class="text-center">
@@ -221,7 +221,7 @@
         </div>
 
         <!-- Features -->
-        <div class="mt-20 grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+        <div class="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
             <div class="text-center">
                 <div class="w-12 h-12 bg-slate-900 rounded-lg flex items-center justify-center mx-auto mb-4">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -253,9 +253,8 @@
             </div>
         </div>
         
-        
         <!-- Footer -->
-        <footer class="text-center py-6 mt-12 content-wrapper">
+        <footer class="text-center py-6 content-wrapper">
             <div class="flex items-center justify-center gap-6 text-xs text-slate-600">
                 <a href="/terms" class="hover:text-slate-900 transition">Terms of Service</a>
                 <span>•</span>
