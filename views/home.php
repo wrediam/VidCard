@@ -128,9 +128,9 @@
         <div class="orb orb-4"></div>
         <div class="orb orb-5"></div>
     </div>
-    <div class="container mx-auto px-4 py-16 max-w-6xl content-wrapper min-h-screen flex flex-col justify-between">
+    <div class="container mx-auto px-4 py-8 md:py-16 max-w-6xl content-wrapper min-h-screen flex flex-col justify-between gap-8 md:gap-0">
         <!-- Header -->
-        <div class="text-center mb-8">
+        <div class="text-center">
             <div class="flex items-center justify-center mb-6">
                 <img src="/images/full_logo.png" alt="VidCard" class="h-20 w-auto">
             </div>
@@ -140,8 +140,8 @@
         </div>
 
         <!-- Main Card -->
-        <div class="max-w-md mx-auto flex-shrink-0">
-            <div class="bg-white rounded-lg shadow-xl border border-slate-200 p-8">
+        <div class="max-w-md mx-auto flex-shrink-0 w-full">
+            <div class="bg-white rounded-lg shadow-xl border border-slate-200 p-8 md:p-10">
                 <div id="emailStep" class="space-y-6">
                     <div class="text-center">
                         <h2 class="text-2xl font-semibold mb-2">Get Started</h2>
