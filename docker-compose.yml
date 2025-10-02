@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "80:80"
+    environment:
+      - DB_HOST=${DB_HOST:-postgres}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME:-vidcard}
+      - DB_USER=${DB_USER:-vidcard}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - SMTP2GO_API_KEY=${SMTP2GO_API_KEY}
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-noreply@vidcard.io}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME:-VidCard}
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
+      - APP_URL=${APP_URL:-https://vidcard.io}
+    depends_on:
+      - postgres
+    volumes:
+      - ./:/var/www/html
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=${DB_NAME:-vidcard}
+      - POSTGRES_USER=${DB_USER:-vidcard}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

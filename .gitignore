@@ -1,0 +1,5 @@
+.env
+db.json
+index_old.php
+.DS_Store
+*.log

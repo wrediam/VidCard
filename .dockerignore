@@ -1,0 +1,11 @@
+.git
+.gitignore
+.env
+.env.example
+README.md
+docker-compose.yml
+*.md
+node_modules
+.DS_Store
+index_old.php
+db.json
