@@ -95,6 +95,29 @@
                         </div>
                     </div>
 
+                    <!-- Analytics Overview -->
+                    <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-8">
+                        <h2 class="text-xl font-semibold mb-6">Analytics Overview</h2>
+                        <div id="analyticsOverview" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg">
+                                <div class="text-sm text-blue-600 font-medium">Total Videos</div>
+                                <div class="text-3xl font-bold text-blue-900" id="totalVideos">0</div>
+                            </div>
+                            <div class="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg">
+                                <div class="text-sm text-green-600 font-medium">Total Clicks</div>
+                                <div class="text-3xl font-bold text-green-900" id="totalClicks">0</div>
+                            </div>
+                            <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg">
+                                <div class="text-sm text-purple-600 font-medium">Avg Clicks/Video</div>
+                                <div class="text-3xl font-bold text-purple-900" id="avgClicks">0</div>
+                            </div>
+                            <div class="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-lg">
+                                <div class="text-sm text-orange-600 font-medium">Top Performer</div>
+                                <div class="text-sm font-bold text-orange-900 truncate" id="topVideo">-</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Videos List -->
                     <div id="videosSection" class="space-y-4">
                         <h2 class="text-xl font-semibold">Your Videos</h2>
@@ -216,6 +239,12 @@
                 return;
             }
             
+            // Update analytics overview
+            updateAnalytics(videos);
+            
+            // Sort by visit count
+            videos.sort((a, b) => (b.visit_count || 0) - (a.visit_count || 0));
+            
             videos.forEach(video => {
                 const div = document.createElement('div');
                 div.className = 'bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition';
@@ -225,18 +254,38 @@
                         <div class="flex-1 min-w-0">
                             <h3 class="font-semibold mb-1 truncate">${video.title}</h3>
                             <p class="text-sm text-slate-600 mb-2">${video.channel_name}</p>
-                            <div class="flex items-center gap-2 text-xs text-slate-500">
-                                <span>${video.visit_count || 0} visits</span>
+                            <div class="flex items-center gap-2 text-xs">
+                                <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
+                                    ${video.visit_count || 0} clicks
+                                </span>
+                                <button onclick="showStats('${video.video_id}')" class="text-slate-600 hover:text-slate-900 underline">
+                                    View Analytics
+                                </button>
                                 <span>•</span>
-                                <button onclick="showStats('${video.video_id}')" class="text-slate-700 hover:text-slate-900">View Stats</button>
-                                <span>•</span>
-                                <button onclick="copyVideoUrl('${video.video_id}')" class="text-slate-700 hover:text-slate-900">Copy Link</button>
+                                <button onclick="copyVideoUrl('${video.video_id}')" class="text-slate-600 hover:text-slate-900 underline">
+                                    Copy Link
+                                </button>
                             </div>
                         </div>
                     </div>
                 `;
                 list.appendChild(div);
             });
+        }
+
+        function updateAnalytics(videos) {
+            const totalVideos = videos.length;
+            const totalClicks = videos.reduce((sum, v) => sum + (parseInt(v.visit_count) || 0), 0);
+            const avgClicks = totalVideos > 0 ? Math.round(totalClicks / totalVideos) : 0;
+            const topVideo = videos.reduce((top, v) => 
+                (parseInt(v.visit_count) || 0) > (parseInt(top.visit_count) || 0) ? v : top
+            , videos[0] || {});
+
+            document.getElementById('totalVideos').textContent = totalVideos;
+            document.getElementById('totalClicks').textContent = totalClicks;
+            document.getElementById('avgClicks').textContent = avgClicks;
+            document.getElementById('topVideo').textContent = topVideo.title || '-';
+            document.getElementById('topVideo').title = topVideo.title || '';
         }
 
         function filterByChannel(channelName) {
@@ -316,29 +365,54 @@
             .then(data => {
                 if (data.success && data.stats) {
                     const content = document.getElementById('statsContent');
+                    const firstVisit = data.stats.first_visit ? new Date(data.stats.first_visit).toLocaleDateString() : '-';
+                    const lastVisit = data.stats.last_visit ? new Date(data.stats.last_visit).toLocaleString() : '-';
+                    
                     content.innerHTML = `
                         <div class="space-y-6">
                             <div class="grid grid-cols-3 gap-4">
-                                <div class="bg-slate-50 p-4 rounded-lg">
-                                    <div class="text-2xl font-bold">${data.stats.total_visits || 0}</div>
-                                    <div class="text-sm text-slate-600">Total Visits</div>
+                                <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg">
+                                    <div class="text-3xl font-bold text-blue-900">${data.stats.total_visits || 0}</div>
+                                    <div class="text-sm text-blue-600 font-medium">Total Clicks</div>
+                                </div>
+                                <div class="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg">
+                                    <div class="text-lg font-bold text-green-900">${firstVisit}</div>
+                                    <div class="text-sm text-green-600 font-medium">First Click</div>
+                                </div>
+                                <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg">
+                                    <div class="text-lg font-bold text-purple-900">${lastVisit}</div>
+                                    <div class="text-sm text-purple-600 font-medium">Last Click</div>
                                 </div>
                             </div>
                             ${data.stats.recent_visits && data.stats.recent_visits.length > 0 ? `
                                 <div>
-                                    <h3 class="font-semibold mb-3">Recent Visits</h3>
-                                    <div class="space-y-2">
+                                    <h3 class="font-semibold mb-3 flex items-center gap-2">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                        </svg>
+                                        Recent Click Activity
+                                    </h3>
+                                    <div class="space-y-2 max-h-96 overflow-y-auto">
                                         ${data.stats.recent_visits.map(visit => `
-                                            <div class="text-sm border-b border-slate-100 pb-2">
-                                                <div class="flex justify-between">
-                                                    <span class="text-slate-600">${new Date(visit.visited_at).toLocaleString()}</span>
-                                                    <span class="text-slate-500">${visit.referrer}</span>
+                                            <div class="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                                                <div class="flex justify-between items-start gap-4">
+                                                    <div class="flex-1">
+                                                        <div class="text-sm font-medium text-slate-900">
+                                                            ${new Date(visit.visited_at).toLocaleString()}
+                                                        </div>
+                                                        <div class="text-xs text-slate-500 mt-1">
+                                                            Referrer: ${visit.referrer === 'direct' ? 'Direct visit' : visit.referrer}
+                                                        </div>
+                                                    </div>
+                                                    <div class="text-xs text-slate-400">
+                                                        ${visit.ip_address || 'Unknown IP'}
+                                                    </div>
                                                 </div>
                                             </div>
                                         `).join('')}
                                     </div>
                                 </div>
-                            ` : ''}
+                            ` : '<p class="text-slate-500 text-center py-8">No clicks yet</p>'}
                         </div>
                     `;
                     document.getElementById('statsModal').classList.remove('hidden');
