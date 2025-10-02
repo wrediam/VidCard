@@ -52,11 +52,16 @@
                     <h1 class="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">VidCard</h1>
                 </div>
                 <div class="flex items-center gap-4">
-                    <button onclick="toggleSearch()" class="text-slate-600 hover:text-slate-900">
+                    <button onclick="toggleSearch()" class="text-slate-600 hover:text-slate-900" title="Search">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                         </svg>
                     </button>
+                    <a href="/api-keys" class="text-slate-600 hover:text-slate-900" title="API Keys">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                        </svg>
+                    </a>
                     <?php if ($currentUser['email'] === 'will@wredia.com'): ?>
                     <a href="/admin" class="text-slate-600 hover:text-slate-900" title="Admin Panel">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

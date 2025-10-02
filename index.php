@@ -3,6 +3,7 @@ session_start();
 require_once 'config.php';
 require_once 'auth.php';
 require_once 'video.php';
+require_once 'api_key.php';
 
 // Auto-migrate database on first run
 try {
@@ -31,6 +32,20 @@ try {
         ");
     } catch (Exception $e) {
         error_log('Column migration check: ' . $e->getMessage());
+    }
+    
+    // Run API migration if needed
+    try {
+        $result = $db->query("SELECT to_regclass('public.api_keys')");
+        $apiTableExists = $result->fetchColumn();
+        
+        if (!$apiTableExists) {
+            $sql = file_get_contents(__DIR__ . '/api_migration.sql');
+            $db->exec($sql);
+            error_log('API tables initialized automatically');
+        }
+    } catch (Exception $e) {
+        error_log('API migration check: ' . $e->getMessage());
     }
     
     // Auto-backfill channel handles for existing videos (runs once per session)
@@ -364,6 +379,114 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
         
+        // Route: Get API keys (requires auth)
+        if (isset($input['action']) && $input['action'] === 'get_api_keys') {
+            if (!$currentUser) {
+                http_response_code(401);
+                echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+                exit;
+            }
+            
+            $apiKeyService = new ApiKey();
+            $keys = $apiKeyService->getUserKeys($currentUser['id']);
+            
+            echo json_encode(['success' => true, 'keys' => $keys]);
+            exit;
+        }
+        
+        // Route: Create API key (requires auth)
+        if (isset($input['action']) && $input['action'] === 'create_api_key') {
+            if (!$currentUser) {
+                http_response_code(401);
+                echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+                exit;
+            }
+            
+            $name = $input['name'] ?? 'API Key';
+            $rateLimit = 100; // Hard-coded rate limit
+            
+            $apiKeyService = new ApiKey();
+            $key = $apiKeyService->generateKey($currentUser['id'], $name, $rateLimit);
+            
+            echo json_encode(['success' => true, 'key' => $key]);
+            exit;
+        }
+        
+        // Route: Delete API key (requires auth)
+        if (isset($input['action']) && $input['action'] === 'delete_api_key') {
+            if (!$currentUser) {
+                http_response_code(401);
+                echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+                exit;
+            }
+            
+            $keyId = $input['key_id'] ?? '';
+            if (!$keyId) {
+                throw new Exception('Key ID required');
+            }
+            
+            $apiKeyService = new ApiKey();
+            $result = $apiKeyService->deleteKey($keyId, $currentUser['id']);
+            
+            if ($result) {
+                echo json_encode(['success' => true, 'message' => 'API key deleted successfully']);
+            } else {
+                throw new Exception('Failed to delete API key');
+            }
+            exit;
+        }
+        
+        // Route: Update API key (requires auth)
+        if (isset($input['action']) && $input['action'] === 'update_api_key') {
+            if (!$currentUser) {
+                http_response_code(401);
+                echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+                exit;
+            }
+            
+            $keyId = $input['key_id'] ?? '';
+            if (!$keyId) {
+                throw new Exception('Key ID required');
+            }
+            
+            $name = $input['name'] ?? null;
+            // Rate limit cannot be changed - it's hard-coded to 100
+            
+            $apiKeyService = new ApiKey();
+            $result = $apiKeyService->updateKey($keyId, $currentUser['id'], $name, null);
+            
+            if ($result) {
+                echo json_encode(['success' => true, 'message' => 'API key updated successfully']);
+            } else {
+                throw new Exception('Failed to update API key');
+            }
+            exit;
+        }
+        
+        // Route: Get API key stats (requires auth)
+        if (isset($input['action']) && $input['action'] === 'get_api_key_stats') {
+            if (!$currentUser) {
+                http_response_code(401);
+                echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+                exit;
+            }
+            
+            $keyId = $input['key_id'] ?? '';
+            if (!$keyId) {
+                throw new Exception('Key ID required');
+            }
+            
+            $apiKeyService = new ApiKey();
+            $stats = $apiKeyService->getKeyStats($keyId, $currentUser['id']);
+            
+            if ($stats === null) {
+                throw new Exception('API key not found or access denied');
+            }
+            
+            echo json_encode(['success' => true, 'stats' => $stats]);
+            exit;
+        }
+        
         throw new Exception('Invalid action');
         
     } catch (Exception $e) {
@@ -403,6 +526,16 @@ if ($path === '/dashboard' || $path === '/dashboard/') {
     exit;
 }
 
+// Route: API Keys (requires auth)
+if ($path === '/api-keys' || $path === '/api-keys/') {
+    if (!$currentUser) {
+        header('Location: /');
+        exit;
+    }
+    include 'views/api_keys.php';
+    exit;
+}
+
 // Route: Admin panel (requires auth and admin email)
 if ($path === '/admin' || $path === '/admin/') {
     if (!$currentUser) {
@@ -414,6 +547,12 @@ if ($path === '/admin' || $path === '/admin/') {
         exit;
     }
     include 'views/admin.php';
+    exit;
+}
+
+// Route: API v1 (handles all API requests)
+if (strpos($path, '/api/v1') === 0) {
+    include 'api.php';
     exit;
 }
 
