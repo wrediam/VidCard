@@ -270,7 +270,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         COUNT(DISTINCT vv.id) as view_count,
                         MAX(vv.visited_at) as last_viewed
                  FROM videos v
-                 LEFT JOIN video_visits vv ON v.video_id = vv.video_id
+                 LEFT JOIN video_visits vv ON v.id = vv.video_id
                  WHERE v.user_id = :user_id
                  GROUP BY v.id
                  ORDER BY v.created_at DESC'
