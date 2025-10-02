@@ -116,26 +116,36 @@
             }
 
             container.innerHTML = users.map(user => `
-                <div 
-                    onclick="selectUser(${user.id}, '${user.email}')"
-                    class="p-4 hover:bg-slate-50 cursor-pointer transition ${selectedUserId === user.id ? 'bg-slate-100' : ''}"
-                >
-                    <div class="flex items-start justify-between">
-                        <div class="flex-1 min-w-0">
-                            <p class="font-medium text-slate-900 truncate">${user.email}</p>
-                            <p class="text-xs text-slate-500 mt-1">
-                                ${user.video_count} video${user.video_count !== 1 ? 's' : ''}
-                            </p>
-                            <p class="text-xs text-slate-400 mt-1">
-                                Joined ${formatDate(user.created_at)}
-                            </p>
+                <div class="p-4 hover:bg-slate-50 transition ${selectedUserId === user.id ? 'bg-slate-100' : ''}">
+                    <div 
+                        onclick="selectUser(${user.id}, '${user.email}')"
+                        class="cursor-pointer"
+                    >
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1 min-w-0">
+                                <p class="font-medium text-slate-900 truncate">${user.email}</p>
+                                <p class="text-xs text-slate-500 mt-1">
+                                    ${user.video_count} video${user.video_count !== 1 ? 's' : ''}
+                                </p>
+                                <p class="text-xs text-slate-400 mt-1">
+                                    Joined ${formatDate(user.created_at)}
+                                </p>
+                            </div>
+                            <div class="ml-2">
+                                ${user.is_active ? 
+                                    '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Active</span>' : 
+                                    '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">Inactive</span>'
+                                }
+                            </div>
                         </div>
-                        <div class="ml-2">
-                            ${user.is_active ? 
-                                '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Active</span>' : 
-                                '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">Inactive</span>'
-                            }
-                        </div>
+                    </div>
+                    <div class="mt-2 pt-2 border-t border-slate-100">
+                        <button 
+                            onclick="event.stopPropagation(); deleteUser(${user.id}, '${user.email}')"
+                            class="text-xs text-red-600 hover:text-red-800 font-medium"
+                        >
+                            🗑️ Delete User & All Videos
+                        </button>
                     </div>
                 </div>
             `).join('');
@@ -301,6 +311,59 @@
                 }
             } catch (error) {
                 console.error('Delete error:', error);
+                alert('Network error. Please try again.');
+            }
+        }
+
+        async function deleteUser(userId, email) {
+            const confirmMessage = `⚠️ DANGER: Delete user "${email}"?\n\nThis will permanently delete:\n• The user account\n• ALL their videos\n• ALL video analytics\n• ALL shared links will break\n\nThis action CANNOT be undone!\n\nType "DELETE" to confirm:`;
+            
+            const confirmation = prompt(confirmMessage);
+            
+            if (confirmation !== 'DELETE') {
+                if (confirmation !== null) {
+                    alert('Deletion cancelled. You must type "DELETE" exactly to confirm.');
+                }
+                return;
+            }
+
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        action: 'delete_user',
+                        user_id: userId 
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(`✅ User "${data.deleted_email}" and all associated data has been permanently deleted.`);
+                    
+                    // Clear video panel if this user was selected
+                    if (selectedUserId === userId) {
+                        selectedUserId = null;
+                        document.getElementById('videosTitle').textContent = 'Select a user';
+                        document.getElementById('videosSubtitle').textContent = 'Choose a user from the list to view their videos';
+                        document.getElementById('videosList').innerHTML = `
+                            <div class="text-center text-slate-400 py-12">
+                                <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                </svg>
+                                <p>No user selected</p>
+                            </div>
+                        `;
+                    }
+                    
+                    // Reload users list
+                    loadUsers();
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to delete user'));
+                }
+            } catch (error) {
+                console.error('Delete user error:', error);
                 alert('Network error. Please try again.');
             }
         }

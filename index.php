@@ -323,6 +323,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
         
+        // Route: Delete user (admin only)
+        if (isset($input['action']) && $input['action'] === 'delete_user') {
+            if (!$currentUser || $currentUser['email'] !== 'will@wredia.com') {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'error' => 'Forbidden']);
+                exit;
+            }
+            
+            $userId = $input['user_id'] ?? '';
+            if (!$userId) {
+                throw new Exception('User ID required');
+            }
+            
+            // Prevent admin from deleting themselves
+            if ($userId == $currentUser['id']) {
+                throw new Exception('Cannot delete your own account');
+            }
+            
+            $db = getDB();
+            
+            // Check if user exists
+            $stmt = $db->prepare('SELECT email FROM users WHERE id = :id');
+            $stmt->execute(['id' => $userId]);
+            $user = $stmt->fetch();
+            
+            if (!$user) {
+                throw new Exception('User not found');
+            }
+            
+            // Delete the user (cascade will delete videos, sessions, etc.)
+            $stmt = $db->prepare('DELETE FROM users WHERE id = :id');
+            $stmt->execute(['id' => $userId]);
+            
+            echo json_encode([
+                'success' => true, 
+                'message' => 'User and all associated data deleted successfully',
+                'deleted_email' => $user['email']
+            ]);
+            exit;
+        }
+        
         throw new Exception('Invalid action');
         
     } catch (Exception $e) {
