@@ -24,8 +24,8 @@ class Video {
      */
     public function fetchVideoData($videoId) {
         $apiKey = YOUTUBE_API_KEY;
-        if (!$apiKey) {
-            throw new Exception('YouTube API key not configured');
+        if (!$apiKey || $apiKey === 'your_youtube_api_key_here') {
+            throw new Exception('YouTube API key not configured. Please set YOUTUBE_API_KEY in environment variables.');
         }
         
         $apiUrl = "https://www.googleapis.com/youtube/v3/videos?id=" . $videoId . "&key=" . $apiKey . "&part=snippet";
@@ -40,14 +40,23 @@ class Video {
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         
         if ($httpCode !== 200) {
+            error_log("YouTube API Error: HTTP $httpCode - Response: " . substr($response, 0, 500));
             curl_close($ch);
-            throw new Exception('Failed to fetch video metadata');
+            
+            // Parse error message if available
+            $errorData = json_decode($response, true);
+            if (isset($errorData['error']['message'])) {
+                throw new Exception('YouTube API Error: ' . $errorData['error']['message']);
+            }
+            
+            throw new Exception('Failed to fetch video metadata (HTTP ' . $httpCode . ')');
         }
         
         $data = json_decode($response, true);
         if (json_last_error() !== JSON_ERROR_NONE || empty($data['items'])) {
+            error_log("YouTube API Invalid Response: " . substr($response, 0, 500));
             curl_close($ch);
-            throw new Exception('Invalid video data received');
+            throw new Exception('Invalid video data received from YouTube API');
         }
         
         $videoData = $data['items'][0]['snippet'];
