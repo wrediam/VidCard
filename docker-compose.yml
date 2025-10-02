@@ -18,8 +18,6 @@ services:
       - APP_URL=${APP_URL:-https://vidcard.io}
     depends_on:
       - postgres
-    volumes:
-      - ./:/var/www/html
     restart: unless-stopped
 
   postgres:
