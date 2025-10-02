@@ -19,11 +19,26 @@
 <body class="bg-slate-50">
     <div class="flex h-screen">
         <!-- Sidebar -->
-        <div id="sidebar" class="w-64 bg-white border-r border-slate-200 flex flex-col transition-all duration-300">
-            <div class="p-6 border-b border-slate-200">
-                <h2 class="text-xl font-bold">Channels</h2>
+        <div id="sidebar" class="w-20 bg-white border-r border-slate-200 flex flex-col transition-all duration-300 overflow-hidden">
+            <div class="p-4 border-b border-slate-200 flex items-center justify-center">
+                <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                </svg>
             </div>
-            <div id="channelList" class="flex-1 overflow-y-auto p-4 space-y-2"></div>
+            <div id="channelList" class="flex-1 overflow-y-auto p-2"></div>
+        </div>
+
+        <!-- Channel Detail Panel -->
+        <div id="channelPanel" class="hidden fixed inset-y-0 left-20 w-80 bg-white border-r border-slate-200 shadow-xl z-40 overflow-y-auto">
+            <div class="sticky top-0 bg-white border-b border-slate-200 p-4 flex items-center justify-between">
+                <h2 class="text-lg font-semibold" id="channelPanelTitle">Channel Videos</h2>
+                <button onclick="closeChannelPanel()" class="text-slate-400 hover:text-slate-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="channelPanelContent" class="p-4"></div>
         </div>
 
         <!-- Main Content -->
@@ -31,11 +46,6 @@
             <!-- Header -->
             <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
                 <div class="flex items-center gap-4">
-                    <button onclick="toggleSidebar()" class="text-slate-600 hover:text-slate-900">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                        </svg>
-                    </button>
                     <h1 class="text-2xl font-bold">VidCard</h1>
                 </div>
                 <div class="flex items-center gap-4">
@@ -165,20 +175,10 @@
 
     <script>
         let channels = {};
-        let sidebarCollapsed = false;
+        let currentChannelName = null;
 
         // Load videos on page load
         loadVideos();
-
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            sidebarCollapsed = !sidebarCollapsed;
-            if (sidebarCollapsed) {
-                sidebar.classList.add('sidebar-collapsed');
-            } else {
-                sidebar.classList.remove('sidebar-collapsed');
-            }
-        }
 
         function toggleSearch() {
             const modal = document.getElementById('searchModal');
@@ -210,17 +210,81 @@
             
             Object.values(channels).forEach(channel => {
                 const div = document.createElement('div');
-                div.className = 'flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 cursor-pointer transition';
-                div.onclick = () => filterByChannel(channel.name);
+                div.className = 'relative group mb-3';
+                div.onclick = () => openChannelPanel(channel);
+                
+                const totalClicks = channel.videos.reduce((sum, v) => sum + (parseInt(v.visit_count) || 0), 0);
+                
                 div.innerHTML = `
-                    ${channel.thumbnail ? `<img src="${channel.thumbnail}" class="w-8 h-8 rounded-full" />` : ''}
-                    <div class="flex-1 min-w-0">
-                        <div class="font-medium text-sm truncate">${channel.name}</div>
-                        <div class="text-xs text-slate-500">${channel.videos.length} videos</div>
+                    <div class="relative cursor-pointer">
+                        ${channel.thumbnail ? 
+                            `<img src="${channel.thumbnail}" class="w-14 h-14 rounded-full mx-auto border-2 border-slate-200 hover:border-slate-400 transition" title="${channel.name}" />` : 
+                            `<div class="w-14 h-14 rounded-full mx-auto bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-xl">${channel.name.charAt(0)}</div>`
+                        }
+                        ${totalClicks > 0 ? `
+                            <div class="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold">
+                                ${totalClicks > 99 ? '99+' : totalClicks}
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="text-xs text-center mt-1 text-slate-600 truncate px-1" title="${channel.name}">
+                        ${channel.videos.length}
                     </div>
                 `;
                 list.appendChild(div);
             });
+        }
+
+        function openChannelPanel(channel) {
+            currentChannelName = channel.name;
+            const panel = document.getElementById('channelPanel');
+            const title = document.getElementById('channelPanelTitle');
+            const content = document.getElementById('channelPanelContent');
+            
+            title.textContent = channel.name;
+            
+            content.innerHTML = `
+                <div class="flex items-center gap-3 mb-6 pb-4 border-b border-slate-200">
+                    ${channel.thumbnail ? 
+                        `<img src="${channel.thumbnail}" class="w-16 h-16 rounded-full" />` : 
+                        `<div class="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-2xl">${channel.name.charAt(0)}</div>`
+                    }
+                    <div>
+                        <h3 class="font-semibold text-lg">${channel.name}</h3>
+                        <p class="text-sm text-slate-600">${channel.videos.length} videos</p>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    ${channel.videos.map(video => `
+                        <div class="bg-slate-50 rounded-lg p-3 hover:bg-slate-100 transition">
+                            <div class="flex gap-3">
+                                <img src="${video.thumbnail_url}" class="w-24 h-16 object-cover rounded flex-shrink-0" />
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="font-medium text-sm mb-1 line-clamp-2">${video.title}</h4>
+                                    <div class="flex items-center gap-2 text-xs">
+                                        <span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium">
+                                            ${video.visit_count || 0} clicks
+                                        </span>
+                                        <button onclick="event.stopPropagation(); showStats('${video.video_id}')" class="text-slate-600 hover:text-slate-900 underline">
+                                            Stats
+                                        </button>
+                                        <button onclick="event.stopPropagation(); copyVideoUrl('${video.video_id}', event)" class="text-slate-600 hover:text-slate-900 underline">
+                                            Copy
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            panel.classList.remove('hidden');
+        }
+
+        function closeChannelPanel() {
+            document.getElementById('channelPanel').classList.add('hidden');
+            currentChannelName = null;
         }
 
         function renderVideos(filter = null) {
