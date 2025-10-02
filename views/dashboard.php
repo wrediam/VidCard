@@ -227,7 +227,7 @@
                 div.className = 'relative group mb-3';
                 div.onclick = () => openChannelPanel(channel);
                 
-                const totalClicks = channel.videos.reduce((sum, v) => sum + (parseInt(v.visit_count) || 0), 0);
+                const videoCount = channel.videos.length;
                 
                 div.innerHTML = `
                     <div class="relative cursor-pointer">
@@ -235,14 +235,14 @@
                             `<img src="${channel.thumbnail}" class="w-14 h-14 rounded-full mx-auto border-2 border-slate-200 hover:border-slate-400 transition" title="${channel.name}" />` : 
                             `<div class="w-14 h-14 rounded-full mx-auto bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-xl">${channel.name.charAt(0)}</div>`
                         }
-                        ${totalClicks > 0 ? `
+                        ${videoCount > 0 ? `
                             <div class="absolute -top-1 -right-1 bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold">
-                                ${totalClicks > 99 ? '99+' : totalClicks}
+                                ${videoCount > 99 ? '99+' : videoCount}
                             </div>
                         ` : ''}
                     </div>
                     <div class="text-xs text-center mt-1 text-slate-600 truncate px-1" title="${channel.name}">
-                        ${channel.videos.length}
+                        ${channel.name.length > 12 ? channel.name.substring(0, 12) + '...' : channel.name}
                     </div>
                 `;
                 list.appendChild(div);
