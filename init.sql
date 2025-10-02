@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS videos (
     channel_name VARCHAR(255),
     channel_url TEXT,
     channel_thumbnail TEXT,
+    channel_handle VARCHAR(255),
     youtube_url TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -84,3 +85,14 @@ BEGIN
     DELETE FROM sessions WHERE expires_at < NOW();
 END;
 $$ LANGUAGE plpgsql;
+
+-- Add channel_handle column if it doesn't exist (migration for existing databases)
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'videos' AND column_name = 'channel_handle'
+    ) THEN
+        ALTER TABLE videos ADD COLUMN channel_handle VARCHAR(255);
+    END IF;
+END $$;

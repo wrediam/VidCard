@@ -13,12 +13,19 @@
     <meta property="og:description" content="<?php echo htmlspecialchars($video['description']); ?>">
     <meta property="og:image" content="<?php echo htmlspecialchars($video['thumbnail_url']); ?>">
     <meta property="og:url" content="<?php echo htmlspecialchars($video['youtube_url']); ?>">
+    <?php if (!empty($video['channel_handle'])): ?>
+    <meta property="og:site_name" content="<?php echo htmlspecialchars($video['channel_handle']); ?>">
+    <?php endif; ?>
     
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="<?php echo htmlspecialchars($video['title']); ?>">
     <meta name="twitter:description" content="<?php echo htmlspecialchars($video['description']); ?>">
     <meta name="twitter:image" content="<?php echo htmlspecialchars($video['thumbnail_url']); ?>">
+    <?php if (!empty($video['channel_handle'])): ?>
+    <meta name="twitter:site" content="<?php echo htmlspecialchars($video['channel_handle']); ?>">
+    <meta name="twitter:creator" content="<?php echo htmlspecialchars($video['channel_handle']); ?>">
+    <?php endif; ?>
     
     <script>
         window.location.href = "<?php echo htmlspecialchars($video['youtube_url']); ?>";

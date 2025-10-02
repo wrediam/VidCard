@@ -15,6 +15,63 @@ try {
         $db->exec($sql);
         error_log('Database schema initialized automatically');
     }
+    
+    // Auto-backfill channel handles for existing videos (runs once per session)
+    if (!isset($_SESSION['handles_backfilled'])) {
+        $stmt = $db->query("SELECT COUNT(*) FROM videos WHERE channel_handle IS NULL OR channel_handle = ''");
+        $missingHandles = $stmt->fetchColumn();
+        
+        if ($missingHandles > 0 && $missingHandles <= 10) {
+            // Only auto-backfill if 10 or fewer videos (to avoid long delays)
+            error_log("Auto-backfilling {$missingHandles} channel handles...");
+            require_once 'video.php';
+            
+            $stmt = $db->query("SELECT * FROM videos WHERE channel_handle IS NULL OR channel_handle = '' LIMIT 10");
+            $videos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            foreach ($videos as $video) {
+                try {
+                    $apiKey = YOUTUBE_API_KEY;
+                    if (!$apiKey || $apiKey === 'your_youtube_api_key_here') continue;
+                    
+                    $apiUrl = "https://www.googleapis.com/youtube/v3/videos?id=" . $video['video_id'] . "&key=" . $apiKey . "&part=snippet";
+                    $ch = curl_init();
+                    curl_setopt($ch, CURLOPT_URL, $apiUrl);
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+                    
+                    $response = curl_exec($ch);
+                    $data = json_decode($response, true);
+                    
+                    if (!empty($data['items'])) {
+                        $channelId = $data['items'][0]['snippet']['channelId'];
+                        $channelUrl = "https://www.googleapis.com/youtube/v3/channels?id=" . $channelId . "&key=" . $apiKey . "&part=snippet";
+                        
+                        curl_setopt($ch, CURLOPT_URL, $channelUrl);
+                        $channelResponse = curl_exec($ch);
+                        $channelData = json_decode($channelResponse, true);
+                        
+                        $channelHandle = $channelData['items'][0]['snippet']['customUrl'] ?? '';
+                        if ($channelHandle && strpos($channelHandle, '@') !== 0) {
+                            $channelHandle = '@' . $channelHandle;
+                        }
+                        if (empty($channelHandle)) {
+                            $channelHandle = '@' . str_replace(' ', '', $video['channel_name']);
+                        }
+                        
+                        $updateStmt = $db->prepare('UPDATE videos SET channel_handle = :channel_handle WHERE id = :id');
+                        $updateStmt->execute(['channel_handle' => $channelHandle, 'id' => $video['id']]);
+                        error_log("Backfilled handle for video: {$video['video_id']} -> {$channelHandle}");
+                    }
+                    curl_close($ch);
+                } catch (Exception $e) {
+                    error_log("Failed to backfill handle for video {$video['video_id']}: " . $e->getMessage());
+                }
+            }
+        }
+        $_SESSION['handles_backfilled'] = true;
+    }
 } catch (Exception $e) {
     error_log('Auto-migration check failed: ' . $e->getMessage());
 }

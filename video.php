@@ -77,9 +77,9 @@ class Video {
         
         $videoData = $data['items'][0]['snippet'];
         
-        // Fetch channel details
+        // Fetch channel details including handle
         $channelId = $videoData['channelId'];
-        $channelUrl = "https://www.googleapis.com/youtube/v3/channels?id=" . $channelId . "&key=" . $apiKey . "&part=snippet";
+        $channelUrl = "https://www.googleapis.com/youtube/v3/channels?id=" . $channelId . "&key=" . $apiKey . "&part=snippet,brandingSettings";
         
         curl_setopt($ch, CURLOPT_URL, $channelUrl);
         $channelResponse = curl_exec($ch);
@@ -88,6 +88,17 @@ class Video {
         curl_close($ch);
         
         $channelThumbnail = $channelData['items'][0]['snippet']['thumbnails']['default']['url'] ?? '';
+        $channelHandle = $channelData['items'][0]['snippet']['customUrl'] ?? '';
+        
+        // Ensure handle starts with @
+        if ($channelHandle && strpos($channelHandle, '@') !== 0) {
+            $channelHandle = '@' . $channelHandle;
+        }
+        
+        // Fallback to channel name if no handle
+        if (empty($channelHandle)) {
+            $channelHandle = '@' . str_replace(' ', '', $videoData['channelTitle']);
+        }
         
         return [
             'video_id' => $videoId,
@@ -97,6 +108,7 @@ class Video {
             'channel_name' => $videoData['channelTitle'],
             'channel_url' => "https://www.youtube.com/channel/" . $channelId,
             'channel_thumbnail' => $channelThumbnail,
+            'channel_handle' => $channelHandle,
             'youtube_url' => "https://www.youtube.com/watch?v=" . $videoId
         ];
     }
@@ -120,8 +132,8 @@ class Video {
         
         // Insert new video
         $stmt = $this->db->prepare(
-            'INSERT INTO videos (user_id, video_id, title, description, thumbnail_url, channel_name, channel_url, channel_thumbnail, youtube_url) 
-             VALUES (:user_id, :video_id, :title, :description, :thumbnail_url, :channel_name, :channel_url, :channel_thumbnail, :youtube_url)'
+            'INSERT INTO videos (user_id, video_id, title, description, thumbnail_url, channel_name, channel_url, channel_thumbnail, channel_handle, youtube_url) 
+             VALUES (:user_id, :video_id, :title, :description, :thumbnail_url, :channel_name, :channel_url, :channel_thumbnail, :channel_handle, :youtube_url)'
         );
         
         return $stmt->execute([
@@ -133,6 +145,7 @@ class Video {
             'channel_name' => $videoData['channel_name'],
             'channel_url' => $videoData['channel_url'],
             'channel_thumbnail' => $videoData['channel_thumbnail'],
+            'channel_handle' => $videoData['channel_handle'] ?? '',
             'youtube_url' => $videoData['youtube_url']
         ]);
     }
