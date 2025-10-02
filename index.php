@@ -228,6 +228,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
         
+        // Route: Get all users (admin only)
+        if (isset($input['action']) && $input['action'] === 'get_all_users') {
+            if (!$currentUser || $currentUser['email'] !== 'will@wredia.com') {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'error' => 'Forbidden']);
+                exit;
+            }
+            
+            $db = getDB();
+            $stmt = $db->query(
+                'SELECT u.id, u.email, u.created_at, u.last_login, u.is_active,
+                        COUNT(v.id) as video_count
+                 FROM users u
+                 LEFT JOIN videos v ON u.id = v.user_id
+                 GROUP BY u.id, u.email, u.created_at, u.last_login, u.is_active
+                 ORDER BY u.created_at DESC'
+            );
+            $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            echo json_encode(['success' => true, 'users' => $users]);
+            exit;
+        }
+        
+        // Route: Get user videos (admin only)
+        if (isset($input['action']) && $input['action'] === 'get_user_videos') {
+            if (!$currentUser || $currentUser['email'] !== 'will@wredia.com') {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'error' => 'Forbidden']);
+                exit;
+            }
+            
+            $userId = $input['user_id'] ?? '';
+            if (!$userId) {
+                throw new Exception('User ID required');
+            }
+            
+            $db = getDB();
+            $stmt = $db->prepare(
+                'SELECT v.*, 
+                        COUNT(DISTINCT vv.id) as view_count,
+                        MAX(vv.visited_at) as last_viewed
+                 FROM videos v
+                 LEFT JOIN video_visits vv ON v.video_id = vv.video_id
+                 WHERE v.user_id = :user_id
+                 GROUP BY v.id
+                 ORDER BY v.created_at DESC'
+            );
+            $stmt->execute(['user_id' => $userId]);
+            $videos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            echo json_encode(['success' => true, 'videos' => $videos]);
+            exit;
+        }
+        
         throw new Exception('Invalid action');
         
     } catch (Exception $e) {
@@ -264,6 +318,20 @@ if ($path === '/dashboard' || $path === '/dashboard/') {
         exit;
     }
     include 'views/dashboard.php';
+    exit;
+}
+
+// Route: Admin panel (requires auth and admin email)
+if ($path === '/admin' || $path === '/admin/') {
+    if (!$currentUser) {
+        header('Location: /');
+        exit;
+    }
+    if ($currentUser['email'] !== 'will@wredia.com') {
+        header('Location: /dashboard');
+        exit;
+    }
+    include 'views/admin.php';
     exit;
 }
 
