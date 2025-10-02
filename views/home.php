@@ -49,11 +49,8 @@
     <div class="container mx-auto px-4 py-16 max-w-6xl">
         <!-- Header -->
         <div class="text-center mb-16">
-            <div class="flex items-center justify-center gap-4 mb-4">
-                <img src="/images/icon.png" alt="VidCard" class="w-16 h-16">
-                <h1 class="text-6xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-                    VidCard
-                </h1>
+            <div class="flex items-center justify-center mb-6">
+                <img src="/images/full_logo.png" alt="VidCard" class="h-20 w-auto">
             </div>
             <p class="text-xl text-slate-600 max-w-2xl mx-auto">
                 Create beautiful, shareable links for YouTube videos with rich social media previews
