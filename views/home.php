@@ -4,8 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VidCard - YouTube Video Sharing with Rich Previews</title>
+    <meta name="description" content="Create beautiful, shareable links for YouTube videos with rich social media previews. Track clicks and boost engagement with VidCard.">
+    <meta name="keywords" content="youtube, video sharing, social media, link shortener, video cards, analytics, click tracking">
+    
     <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
     <link rel="icon" type="image/png" href="/images/icon.png">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="<?php echo APP_URL; ?>">
+    <meta property="og:title" content="VidCard - YouTube Video Sharing with Rich Previews">
+    <meta property="og:description" content="Create beautiful, shareable links for YouTube videos with rich social media previews. Track clicks and boost engagement.">
+    <meta property="og:image" content="<?php echo APP_URL; ?>/images/vidcard.png">
+    <meta property="og:site_name" content="VidCard">
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="<?php echo APP_URL; ?>">
+    <meta name="twitter:title" content="VidCard - YouTube Video Sharing with Rich Previews">
+    <meta name="twitter:description" content="Create beautiful, shareable links for YouTube videos with rich social media previews. Track clicks and boost engagement.">
+    <meta name="twitter:image" content="<?php echo APP_URL; ?>/images/vidcard.png">
+    
+    <!-- Additional SEO -->
+    <meta name="author" content="VidCard">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="<?php echo APP_URL; ?>">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
