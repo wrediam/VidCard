@@ -283,38 +283,38 @@
                     </svg>
                 </button>
             </div>
-            <div class="p-6 max-h-[70vh] overflow-y-auto">
+            <div class="p-6 overflow-y-auto" style="max-height: calc(100vh - 200px);">
                 <div id="aiToolsContent">
-                    <div class="text-center py-8">
-                        <div class="mb-6">
-                            <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-100 to-blue-100 rounded-full mb-4">
-                                <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="text-center py-6">
+                        <div class="mb-4">
+                            <div class="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-purple-100 to-blue-100 rounded-full mb-3">
+                                <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
                                 </svg>
                             </div>
-                            <h4 class="text-xl font-semibold text-slate-900 mb-2">Generate Social Media Posts</h4>
-                            <p class="text-slate-600 max-w-md mx-auto">Use AI to create 5 engaging post suggestions based on your video transcript. Perfect for promoting your content!</p>
+                            <h4 class="text-lg font-semibold text-slate-900 mb-1">Generate Social Media Posts</h4>
+                            <p class="text-sm text-slate-600 max-w-md mx-auto">Use AI to create 5 engaging post suggestions based on your video transcript.</p>
                         </div>
                         <button 
                             onclick="generatePostSuggestions()"
                             id="generatePostsBtn"
-                            class="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition shadow-lg hover:shadow-xl"
+                            class="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition shadow-lg hover:shadow-xl"
                         >
                             Generate Post Suggestions
                         </button>
                     </div>
                     <div id="postSuggestionsContainer" class="hidden">
-                        <div class="mb-6 flex items-center justify-between">
+                        <div class="mb-4 flex items-center justify-between">
                             <div>
-                                <h4 class="text-lg font-semibold text-slate-900">Your Post Suggestions</h4>
-                                <p class="text-sm text-slate-600 mt-1">Preview how your post will look on Twitter</p>
+                                <h4 class="text-base font-semibold text-slate-900">Your Post Suggestions</h4>
+                                <p class="text-xs text-slate-600 mt-0.5">Preview how your post will look on Twitter</p>
                             </div>
                             <button 
                                 onclick="generatePostSuggestions()"
                                 id="regeneratePostsBtn"
-                                class="px-4 py-2 text-sm bg-slate-100 text-slate-700 rounded-md font-medium hover:bg-slate-200 transition flex items-center gap-2"
+                                class="px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded-md font-medium hover:bg-slate-200 transition flex items-center gap-1.5"
                             >
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                                 </svg>
                                 Regenerate
@@ -322,51 +322,51 @@
                         </div>
                         
                         <!-- Twitter Card Preview -->
-                        <div class="max-w-2xl mx-auto">
+                        <div class="max-w-xl mx-auto">
                             <!-- Navigation Counter -->
-                            <div class="flex items-center justify-center gap-4 mb-4">
+                            <div class="flex items-center justify-center gap-3 mb-3">
                                 <button 
                                     onclick="previousSuggestion()"
                                     id="prevBtn"
-                                    class="p-2 rounded-full bg-slate-100 hover:bg-slate-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                    class="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    <svg class="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                                     </svg>
                                 </button>
-                                <span class="text-sm font-medium text-slate-600">
+                                <span class="text-xs font-medium text-slate-600">
                                     <span id="currentIndex">1</span> / <span id="totalSuggestions">5</span>
                                 </span>
                                 <button 
                                     onclick="nextSuggestion()"
                                     id="nextBtn"
-                                    class="p-2 rounded-full bg-slate-100 hover:bg-slate-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                    class="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    <svg class="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                                     </svg>
                                 </button>
                             </div>
                             
                             <!-- Twitter Card -->
-                            <div id="twitterCard" class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition">
+                            <div id="twitterCard" class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition">
                                 <!-- Post Text -->
-                                <div class="p-4">
-                                    <div class="flex items-start gap-3 mb-3">
-                                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
-                                            <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                <div class="p-3">
+                                    <div class="flex items-start gap-2.5">
+                                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
                                                 <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"></path>
                                             </svg>
                                         </div>
                                         <div class="flex-1 min-w-0">
                                             <div class="flex items-center gap-1 mb-1">
-                                                <span class="font-bold text-slate-900">Your Channel</span>
-                                                <svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
+                                                <span class="font-bold text-slate-900 text-sm">Social Media Account</span>
+                                                <svg class="w-3.5 h-3.5 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
                                                     <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                 </svg>
-                                                <span class="text-slate-500 text-sm">@channel · now</span>
+                                                <span class="text-slate-500 text-xs">@username · now</span>
                                             </div>
-                                            <p id="postText" class="text-slate-900 text-base leading-relaxed whitespace-pre-wrap"></p>
+                                            <p id="postText" class="text-slate-900 text-sm leading-relaxed whitespace-pre-wrap"></p>
                                         </div>
                                     </div>
                                 </div>
@@ -377,24 +377,24 @@
                                 </div>
                                 
                                 <!-- Twitter Actions -->
-                                <div class="border-t border-slate-200 px-4 py-3 flex items-center justify-around text-slate-500">
-                                    <button class="flex items-center gap-2 hover:text-blue-500 transition">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div class="border-t border-slate-200 px-3 py-2 flex items-center justify-around text-slate-500">
+                                    <button class="flex items-center gap-1 hover:text-blue-500 transition">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
                                         </svg>
                                     </button>
-                                    <button class="flex items-center gap-2 hover:text-green-500 transition">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <button class="flex items-center gap-1 hover:text-green-500 transition">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                                         </svg>
                                     </button>
-                                    <button class="flex items-center gap-2 hover:text-red-500 transition">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <button class="flex items-center gap-1 hover:text-red-500 transition">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
                                         </svg>
                                     </button>
-                                    <button class="flex items-center gap-2 hover:text-blue-500 transition">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <button class="flex items-center gap-1 hover:text-blue-500 transition">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path>
                                         </svg>
                                     </button>
@@ -402,13 +402,13 @@
                             </div>
                             
                             <!-- Copy Button -->
-                            <div class="mt-4 text-center">
+                            <div class="mt-3 text-center">
                                 <button 
                                     onclick="copyCurrentPost()"
                                     id="copyPostBtn"
-                                    class="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition shadow-lg hover:shadow-xl flex items-center gap-2 mx-auto"
+                                    class="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg text-sm font-medium hover:from-purple-700 hover:to-blue-700 transition shadow-lg hover:shadow-xl flex items-center gap-2 mx-auto"
                                 >
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                                     </svg>
                                     Copy Post with Link
