@@ -262,7 +262,7 @@
                                     View Analytics
                                 </button>
                                 <span>•</span>
-                                <button onclick="copyVideoUrl('${video.video_id}')" class="text-slate-600 hover:text-slate-900 underline">
+                                <button onclick="copyVideoUrl('${video.video_id}', event)" class="text-slate-600 hover:text-slate-900 underline transition-colors">
                                     Copy Link
                                 </button>
                             </div>
@@ -350,9 +350,22 @@
             setTimeout(() => success.classList.add('hidden'), 2000);
         }
 
-        function copyVideoUrl(videoId) {
+        function copyVideoUrl(videoId, event) {
             const url = `<?php echo APP_URL; ?>/?v=${videoId}`;
-            navigator.clipboard.writeText(url);
+            navigator.clipboard.writeText(url).then(() => {
+                // Get the button that was clicked
+                const button = event ? event.target : null;
+                if (button) {
+                    const originalText = button.textContent;
+                    button.textContent = '✓ Copied!';
+                    button.classList.add('text-green-600', 'font-semibold');
+                    
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.classList.remove('text-green-600', 'font-semibold');
+                    }, 2000);
+                }
+            });
         }
 
         function showStats(videoId) {
@@ -459,11 +472,14 @@
                             results.innerHTML = '<p class="text-slate-500 text-center py-4">No results found</p>';
                         } else {
                             results.innerHTML = data.results.map(video => `
-                                <div class="flex gap-3 p-3 hover:bg-slate-50 rounded-lg cursor-pointer" onclick="copyVideoUrl('${video.video_id}')">
+                                <div class="flex gap-3 p-3 hover:bg-slate-50 rounded-lg">
                                     <img src="${video.thumbnail_url}" class="w-24 h-16 object-cover rounded" />
                                     <div class="flex-1 min-w-0">
                                         <div class="font-medium text-sm truncate">${video.title}</div>
-                                        <div class="text-xs text-slate-500">${video.channel_name}</div>
+                                        <div class="text-xs text-slate-500 mb-2">${video.channel_name}</div>
+                                        <button onclick="copyVideoUrl('${video.video_id}', event)" class="text-xs text-slate-600 hover:text-slate-900 underline transition-colors">
+                                            Copy Link
+                                        </button>
                                     </div>
                                 </div>
                             `).join('');
