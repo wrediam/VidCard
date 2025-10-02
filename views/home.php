@@ -253,16 +253,18 @@
             </div>
         </div>
         
-        <!-- Footer -->
-        <footer class="text-center py-8 content-wrapper">
-            <div class="flex items-center justify-center gap-6 text-sm text-slate-600 mb-4">
-                <a href="/terms" class="hover:text-slate-900 transition">Terms of Service</a>
-                <span>•</span>
-                <a href="/privacy" class="hover:text-slate-900 transition">Privacy Policy</a>
-            </div>
-            <p class="text-xs text-slate-500">© <?php echo date('Y'); ?> VidCard. All rights reserved.</p>
-        </footer>
     </div>
+    
+    <!-- Fixed Footer -->
+    <footer class="fixed bottom-0 left-0 right-0 py-4 content-wrapper pointer-events-none">
+        <div class="flex items-center justify-center gap-6 text-xs text-slate-600 pointer-events-auto">
+            <a href="/terms" class="hover:text-slate-900 transition">Terms of Service</a>
+            <span>•</span>
+            <a href="/privacy" class="hover:text-slate-900 transition">Privacy Policy</a>
+            <span>•</span>
+            <span class="text-slate-500">© <?php echo date('Y'); ?> VidCard</span>
+        </div>
+    </footer>
 
     <!-- Cookie Consent Banner -->
     <div id="cookieConsent" class="hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg z-50">
