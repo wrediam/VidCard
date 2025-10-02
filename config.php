@@ -14,6 +14,9 @@ define('SMTP_FROM_NAME', getenv('SMTP_FROM_NAME') ?: 'VidCard');
 // YouTube API
 define('YOUTUBE_API_KEY', getenv('YOUTUBE_API_KEY') ?: '');
 
+// Caption/Transcript API
+define('CAPTION_API_KEY', getenv('CAPTION_API_KEY') ?: '');
+
 // App Configuration
 define('APP_URL', getenv('APP_URL') ?: 'https://vidcard.io');
 define('SESSION_LIFETIME', 30 * 24 * 60 * 60); // 30 days

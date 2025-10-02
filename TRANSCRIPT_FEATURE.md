@@ -4,6 +4,17 @@
 
 VidCard now automatically fetches and stores YouTube video transcripts when videos are processed. Users can view transcripts in a beautiful modal and retrieve them on-demand if not initially available.
 
+## Setup Requirements
+
+**Environment Variable Required:**
+Add the Caption API key to your `.env` file:
+
+```bash
+CAPTION_API_KEY=XXXXXXX
+```
+
+This key is already included in `.env.example` and configured in `config.php`. Without this key, transcript fetching will fail silently.
+
 ## Features Implemented
 
 ### ✅ Database Schema
@@ -187,10 +198,12 @@ Potential improvements:
 ## Troubleshooting
 
 ### Transcript not fetching
-- Check if video has captions enabled on YouTube
-- Verify API key is valid in `transcript.php`
-- Check error logs for API failures
-- Ensure network connectivity to vid.wredia.com
+- **Check environment variable:** Ensure `CAPTION_API_KEY` is set in your `.env` file
+- **Verify API key:** The key should match the one in `.env.example`
+- **Check video captions:** Verify the video has captions enabled on YouTube
+- **Review error logs:** Check PHP error logs for API failures
+- **Test connectivity:** Ensure network access to `vid.wredia.com`
+- **Restart server:** After adding the env variable, restart your web server/Docker container
 
 ### Database errors
 - Run migration manually if auto-migration fails

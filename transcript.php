@@ -22,7 +22,7 @@ class Transcript {
             curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 10);
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'X-API-Key: WrediaAPI_2025_9f8e7d6c5b4a3210fedcba0987654321abcdef1234567890bcda1ef2a3b4c5d6e7f8g9h0i1j2k3l4m5n6o7p8q9r0s1t2u3v4w5x6y7z8'
+                'X-API-Key: ' . CAPTION_API_KEY
             ]);
             
             $response = curl_exec($ch);
