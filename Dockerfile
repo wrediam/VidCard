@@ -28,7 +28,8 @@ RUN echo '<Directory /var/www/html>\n\
     AllowOverride All\n\
     Require all granted\n\
 </Directory>' > /etc/apache2/conf-available/vidcard.conf \
-    && a2enconf vidcard
+    && a2enconf vidcard \
+    && echo "ServerName vidcard.io" >> /etc/apache2/apache2.conf
 
 EXPOSE 80
 
