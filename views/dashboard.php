@@ -320,8 +320,7 @@
                                 <p class="text-sm text-slate-600 max-w-md mx-auto mb-4">AI-powered viral clip suggestions with timestamps and titles.</p>
                             </div>
                             <button 
-                                onclick="generateClipSuggestions()"
-                                id="generateClipsBtn"
+                                onclick="openClipSuggestionsModal()"
                                 class="px-6 py-2.5 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg font-medium hover:from-orange-700 hover:to-red-700 transition shadow-lg hover:shadow-xl"
                             >
                                 Generate Clips
@@ -442,7 +441,64 @@
                         </div>
                     </div>
                     
-                    <!-- Clip Suggestions Container -->
+                </div>
+            </div>
+            <div class="sticky bottom-0 bg-slate-50 border-t border-slate-200 p-4 rounded-b-lg flex justify-end">
+                <button 
+                    onclick="closeAIToolsModal()"
+                    class="px-4 py-2 border border-slate-300 text-slate-700 rounded-md font-medium hover:bg-slate-50 transition"
+                >
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clip Suggestions Modal -->
+    <div id="clipSuggestionsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center overflow-y-auto p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-5xl w-full my-8">
+            <div class="sticky top-0 bg-gradient-to-r from-orange-600 to-red-600 border-b border-orange-700 p-6 flex items-center justify-between rounded-t-lg z-10">
+                <div class="flex items-center gap-3">
+                    <button onclick="backToAITools()" class="text-white hover:text-orange-100 transition">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </button>
+                    <h3 class="text-2xl font-bold text-white flex items-center gap-2">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Clip Suggestions
+                    </h3>
+                </div>
+                <button onclick="closeClipSuggestionsModal()" class="text-white hover:text-orange-100 transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto" style="max-height: calc(100vh - 200px);">
+                <div id="clipSuggestionsContent">
+                    <div class="text-center py-6">
+                        <div class="mb-4">
+                            <div class="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-orange-100 to-red-100 rounded-full mb-3">
+                                <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <h4 class="text-lg font-semibold text-slate-900 mb-1">Generate Viral Clip Suggestions</h4>
+                            <p class="text-sm text-slate-600 max-w-md mx-auto">AI will analyze your video transcript to identify the most engaging moments perfect for social media clips.</p>
+                        </div>
+                        <button 
+                            onclick="generateClipSuggestions()"
+                            id="generateClipsBtn"
+                            class="px-6 py-2.5 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg font-medium hover:from-orange-700 hover:to-red-700 transition shadow-lg hover:shadow-xl"
+                        >
+                            Generate Clip Suggestions
+                        </button>
+                    </div>
                     <div id="clipSuggestionsContainer" class="hidden">
                         <div class="mb-4 flex items-center justify-between">
                             <div>
@@ -462,7 +518,7 @@
                         </div>
                         
                         <!-- Clip Preview -->
-                        <div class="max-w-3xl mx-auto">
+                        <div class="max-w-4xl mx-auto">
                             <!-- Navigation Counter -->
                             <div class="flex items-center justify-center gap-3 mb-3">
                                 <button 
@@ -521,7 +577,7 @@
             </div>
             <div class="sticky bottom-0 bg-slate-50 border-t border-slate-200 p-4 rounded-b-lg flex justify-end">
                 <button 
-                    onclick="closeAIToolsModal()"
+                    onclick="closeClipSuggestionsModal()"
                     class="px-4 py-2 border border-slate-300 text-slate-700 rounded-md font-medium hover:bg-slate-50 transition"
                 >
                     Close
@@ -1197,7 +1253,6 @@
             const regenerateBtn = document.getElementById('regeneratePostsBtn');
             const aiToolsSelection = document.getElementById('aiToolsSelection');
             const suggestionsContainer = document.getElementById('postSuggestionsContainer');
-            const clipContainer = document.getElementById('clipSuggestionsContainer');
             
             // Disable buttons and show loading state
             if (btn) {
@@ -1231,7 +1286,6 @@
                 if (data.success && data.suggestions) {
                     // Hide other views and show post suggestions
                     if (aiToolsSelection) aiToolsSelection.classList.add('hidden');
-                    if (clipContainer) clipContainer.classList.add('hidden');
                     suggestionsContainer.classList.remove('hidden');
                     
                     // Render suggestions
@@ -1359,12 +1413,20 @@
         // Keyboard navigation for carousel
         document.addEventListener('keydown', function(e) {
             const aiToolsModal = document.getElementById('aiToolsModal');
+            const clipModal = document.getElementById('clipSuggestionsModal');
+            
             if (!aiToolsModal.classList.contains('hidden')) {
                 if (e.key === 'ArrowLeft') {
                     previousSuggestion();
-                    previousClip();
                 } else if (e.key === 'ArrowRight') {
                     nextSuggestion();
+                }
+            }
+            
+            if (!clipModal.classList.contains('hidden')) {
+                if (e.key === 'ArrowLeft') {
+                    previousClip();
+                } else if (e.key === 'ArrowRight') {
                     nextClip();
                 }
             }
@@ -1374,23 +1436,45 @@
         let allClips = [];
         let currentClipIndex = 0;
 
+        // Clip Suggestions Modal Functions
+        function openClipSuggestionsModal() {
+            document.getElementById('clipSuggestionsModal').classList.remove('hidden');
+            document.getElementById('aiToolsModal').classList.add('hidden');
+        }
+
+        function closeClipSuggestionsModal() {
+            document.getElementById('clipSuggestionsModal').classList.add('hidden');
+            // Reset view
+            const initialView = document.querySelector('#clipSuggestionsContent > .text-center');
+            const container = document.getElementById('clipSuggestionsContainer');
+            if (initialView) initialView.classList.remove('hidden');
+            if (container) container.classList.add('hidden');
+        }
+
+        function backToAITools() {
+            document.getElementById('clipSuggestionsModal').classList.add('hidden');
+            document.getElementById('aiToolsModal').classList.remove('hidden');
+        }
+
         async function generateClipSuggestions() {
             const btn = document.getElementById('generateClipsBtn');
             const regenerateBtn = document.getElementById('regenerateClipsBtn');
             const clipContainer = document.getElementById('clipSuggestionsContainer');
-            const postContainer = document.getElementById('postSuggestionsContainer');
-            const aiToolsSelection = document.getElementById('aiToolsSelection');
+            const initialView = document.querySelector('#clipSuggestionsContent > .text-center');
 
             // Disable buttons and show loading state
             if (btn) {
                 btn.disabled = true;
                 btn.innerHTML = `
-                    <div class="flex items-center justify-center gap-2">
-                        <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <span>Generating...</span>
+                    <div class="flex flex-col items-center justify-center gap-2">
+                        <div class="flex items-center gap-2">
+                            <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>Analyzing video...</span>
+                        </div>
+                        <span class="text-xs opacity-75">This may take up to 2 minutes</span>
                     </div>
                 `;
             }
@@ -1411,9 +1495,8 @@
                 const data = await response.json();
 
                 if (data.success && data.suggestions) {
-                    // Hide other views and show clip suggestions
-                    if (aiToolsSelection) aiToolsSelection.classList.add('hidden');
-                    if (postContainer) postContainer.classList.add('hidden');
+                    // Hide initial view and show clip suggestions
+                    if (initialView) initialView.classList.add('hidden');
                     clipContainer.classList.remove('hidden');
                     
                     // Render clip suggestions
@@ -1428,7 +1511,7 @@
                 // Re-enable buttons
                 if (btn) {
                     btn.disabled = false;
-                    btn.textContent = 'Generate Clips';
+                    btn.textContent = 'Generate Clip Suggestions';
                 }
                 if (regenerateBtn) {
                     regenerateBtn.disabled = false;

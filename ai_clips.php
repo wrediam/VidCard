@@ -30,18 +30,25 @@ class AIClips {
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $transcriptText);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 120); // Increased to 120 seconds for AI processing
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
                 'Content-Type: text/plain'
             ]);
             
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
             curl_close($ch);
             
+            if ($curlError) {
+                error_log("n8n clip webhook cURL error: $curlError");
+                throw new Exception('Network error connecting to AI service: ' . $curlError);
+            }
+            
             if ($httpCode !== 200 || !$response) {
-                error_log("n8n clip webhook error: HTTP $httpCode - Response: " . substr($response, 0, 500));
-                throw new Exception('Failed to generate clip suggestions from n8n webhook');
+                error_log("n8n clip webhook error: HTTP $httpCode - Response: " . substr($response ?: 'empty', 0, 500));
+                throw new Exception('Failed to generate clip suggestions from n8n webhook (HTTP ' . $httpCode . ')');
             }
             
             $data = json_decode($response, true);

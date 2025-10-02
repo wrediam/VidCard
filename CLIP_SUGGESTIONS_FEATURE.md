@@ -122,9 +122,10 @@ psql -U vidcard -d vidcard -f ai_clips_migration.sql
 ## Error Handling
 
 - **No Transcript**: Shows error if transcript not available
-- **Webhook Timeout**: 30-second timeout on n8n request
+- **Webhook Timeout**: 120-second timeout on n8n request (AI processing can take time)
 - **Invalid Response**: Validates response format from n8n
-- **Network Errors**: User-friendly error messages
+- **Network Errors**: User-friendly error messages with detailed logging
+- **Loading Indicator**: Shows "This may take up to 2 minutes" message to users
 
 ## Future Enhancements
 
