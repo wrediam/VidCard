@@ -71,6 +71,38 @@
         </main>
     </div>
 
+    <!-- Delete Video Confirmation Modal -->
+    <div id="deleteVideoModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="p-6">
+                <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
+                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-semibold text-center mb-2">Delete Video?</h3>
+                <p class="text-sm text-slate-600 text-center mb-6">
+                    This will permanently delete this video. <strong class="text-red-600">Any shared links will stop working immediately.</strong> This action cannot be undone.
+                </p>
+                <div class="flex gap-3">
+                    <button 
+                        onclick="closeDeleteVideoModal()" 
+                        class="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition font-medium"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        onclick="confirmDeleteVideo()" 
+                        id="confirmDeleteVideoBtn"
+                        class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium"
+                    >
+                        Delete Video
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Delete User Confirmation Modal -->
     <div id="deleteUserModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
@@ -335,10 +367,25 @@
             window.location.href = '/';
         }
 
-        async function deleteVideo(videoId) {
-            if (!confirm('Are you sure you want to delete this video? This will break any shared links and cannot be undone.')) {
-                return;
-            }
+        // Delete video modal state
+        let videoToDelete = null;
+
+        function deleteVideo(videoId) {
+            videoToDelete = videoId;
+            document.getElementById('deleteVideoModal').classList.remove('hidden');
+        }
+
+        function closeDeleteVideoModal() {
+            videoToDelete = null;
+            document.getElementById('deleteVideoModal').classList.add('hidden');
+        }
+
+        async function confirmDeleteVideo() {
+            if (!videoToDelete) return;
+
+            const btn = document.getElementById('confirmDeleteVideoBtn');
+            btn.disabled = true;
+            btn.textContent = 'Deleting...';
 
             try {
                 const response = await fetch('/', {
@@ -346,13 +393,15 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         action: 'delete_video',
-                        video_id: videoId 
+                        video_id: videoToDelete 
                     })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
+                    closeDeleteVideoModal();
+                    
                     // Reload the current user's videos
                     if (selectedUserId) {
                         const userEmail = document.getElementById('videosTitle').textContent;
@@ -362,10 +411,14 @@
                     loadUsers();
                 } else {
                     alert('Error: ' + (data.error || 'Failed to delete video'));
+                    btn.disabled = false;
+                    btn.textContent = 'Delete Video';
                 }
             } catch (error) {
                 console.error('Delete error:', error);
                 alert('Network error. Please try again.');
+                btn.disabled = false;
+                btn.textContent = 'Delete Video';
             }
         }
 
@@ -464,9 +517,10 @@
             }
         }
 
-        // Close modal on Escape key
+        // Close modals on Escape key
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
+                closeDeleteVideoModal();
                 closeDeleteUserModal();
             }
         });
