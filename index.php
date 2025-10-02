@@ -48,6 +48,24 @@ try {
         error_log('API migration check: ' . $e->getMessage());
     }
     
+    // Run transcript migration if needed
+    try {
+        $result = $db->query("
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'videos' AND column_name = 'transcript_text'
+        ");
+        $transcriptColumnExists = $result->fetchColumn();
+        
+        if (!$transcriptColumnExists) {
+            $sql = file_get_contents(__DIR__ . '/transcript_migration.sql');
+            $db->exec($sql);
+            error_log('Transcript columns initialized automatically');
+        }
+    } catch (Exception $e) {
+        error_log('Transcript migration check: ' . $e->getMessage());
+    }
+    
     // Auto-backfill channel handles for existing videos (runs once per session)
     if (!isset($_SESSION['handles_backfilled'])) {
         $stmt = $db->query("SELECT COUNT(*) FROM videos WHERE channel_handle IS NULL OR channel_handle = ''");
@@ -484,6 +502,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             echo json_encode(['success' => true, 'stats' => $stats]);
+            exit;
+        }
+        
+        // Route: Get transcript (requires auth)
+        if (isset($input['action']) && $input['action'] === 'get_transcript') {
+            if (!$currentUser) {
+                http_response_code(401);
+                echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+                exit;
+            }
+            
+            $videoId = $input['video_id'] ?? '';
+            if (!$videoId) {
+                throw new Exception('Video ID required');
+            }
+            
+            // Verify video belongs to user
+            $videoService = new Video();
+            $video = $videoService->getVideoByVideoId($videoId);
+            
+            if (!$video || $video['user_id'] != $currentUser['id']) {
+                throw new Exception('Video not found or access denied');
+            }
+            
+            $transcriptService = new Transcript();
+            $transcript = $transcriptService->getTranscript($videoId);
+            
+            echo json_encode([
+                'success' => true,
+                'has_transcript' => !empty($transcript['transcript_text']),
+                'transcript' => $transcript['transcript_text'] ?? null,
+                'fetched_at' => $transcript['transcript_fetched_at'] ?? null
+            ]);
+            exit;
+        }
+        
+        // Route: Fetch transcript (requires auth)
+        if (isset($input['action']) && $input['action'] === 'fetch_transcript') {
+            if (!$currentUser) {
+                http_response_code(401);
+                echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+                exit;
+            }
+            
+            $videoId = $input['video_id'] ?? '';
+            if (!$videoId) {
+                throw new Exception('Video ID required');
+            }
+            
+            // Verify video belongs to user
+            $videoService = new Video();
+            $video = $videoService->getVideoByVideoId($videoId);
+            
+            if (!$video || $video['user_id'] != $currentUser['id']) {
+                throw new Exception('Video not found or access denied');
+            }
+            
+            $transcriptService = new Transcript();
+            $result = $transcriptService->processTranscript($video['youtube_url'], $videoId);
+            
+            if (!$result) {
+                throw new Exception('Failed to fetch transcript. Transcript may not be available for this video.');
+            }
+            
+            $transcript = $transcriptService->getTranscript($videoId);
+            
+            echo json_encode([
+                'success' => true,
+                'transcript' => $transcript['transcript_text'] ?? null,
+                'fetched_at' => $transcript['transcript_fetched_at'] ?? null
+            ]);
             exit;
         }
         

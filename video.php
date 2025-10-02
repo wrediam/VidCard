@@ -1,11 +1,14 @@
 <?php
 require_once 'config.php';
+require_once 'transcript.php';
 
 class Video {
     private $db;
+    private $transcriptService;
     
     public function __construct() {
         $this->db = getDB();
+        $this->transcriptService = new Transcript();
     }
     
     /**
@@ -136,7 +139,7 @@ class Video {
              VALUES (:user_id, :video_id, :title, :description, :thumbnail_url, :channel_name, :channel_url, :channel_thumbnail, :channel_handle, :youtube_url)'
         );
         
-        return $stmt->execute([
+        $result = $stmt->execute([
             'user_id' => $userId,
             'video_id' => $videoData['video_id'],
             'title' => $videoData['title'],
@@ -148,6 +151,21 @@ class Video {
             'channel_handle' => $videoData['channel_handle'] ?? '',
             'youtube_url' => $videoData['youtube_url']
         ]);
+        
+        // Try to fetch transcript asynchronously (don't block on failure)
+        if ($result) {
+            try {
+                $this->transcriptService->processTranscript(
+                    $videoData['youtube_url'], 
+                    $videoData['video_id']
+                );
+            } catch (Exception $e) {
+                // Log but don't fail the video save
+                error_log('Transcript fetch failed for ' . $videoData['video_id'] . ': ' . $e->getMessage());
+            }
+        }
+        
+        return $result;
     }
     
     /**

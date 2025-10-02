@@ -202,6 +202,43 @@
         </div>
     </div>
 
+    <!-- Transcript Modal -->
+    <div id="transcriptModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center overflow-y-auto p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8">
+            <div class="sticky top-0 bg-white border-b border-slate-200 p-6 flex items-center justify-between rounded-t-lg z-10">
+                <h3 class="text-2xl font-bold text-slate-900">📝 Video Transcript</h3>
+                <button onclick="closeTranscriptModal()" class="text-slate-400 hover:text-slate-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6 max-h-[70vh] overflow-y-auto">
+                <div id="transcriptContent" class="prose max-w-none">
+                    <div class="flex items-center justify-center py-8">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
+                        <p class="ml-3 text-slate-600">Loading transcript...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="sticky bottom-0 bg-slate-50 border-t border-slate-200 p-4 rounded-b-lg flex justify-between">
+                <button 
+                    onclick="copyTranscript()"
+                    id="copyTranscriptBtn"
+                    class="px-4 py-2 bg-slate-900 text-white rounded-md font-medium hover:bg-slate-800 transition"
+                >
+                    Copy Transcript
+                </button>
+                <button 
+                    onclick="closeTranscriptModal()"
+                    class="px-4 py-2 border border-slate-300 text-slate-700 rounded-md font-medium hover:bg-slate-50 transition"
+                >
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Delete Confirmation Modal -->
     <div id="deleteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
@@ -337,6 +374,10 @@
                                                 Copy
                                             </button>
                                             <span class="text-slate-300">•</span>
+                                            <button onclick="event.stopPropagation(); viewTranscript('${video.video_id}', ${video.transcript_text ? 'true' : 'false'})" class="text-blue-600 hover:text-blue-800 underline">
+                                                ${video.transcript_text ? 'View Transcript' : 'Retrieve Transcript'}
+                                            </button>
+                                            <span class="text-slate-300">•</span>
                                             <button onclick="event.stopPropagation(); showDeleteModal('${video.video_id}')" class="text-red-600 hover:text-red-800 underline">
                                                 Delete
                                             </button>
@@ -402,6 +443,10 @@
                                     <span class="text-slate-300">•</span>
                                     <button onclick="copyVideoUrl('${video.video_id}', event)" class="text-slate-600 hover:text-slate-900 underline transition-colors">
                                         Copy
+                                    </button>
+                                    <span class="text-slate-300">•</span>
+                                    <button onclick="viewTranscript('${video.video_id}', ${video.transcript_text ? 'true' : 'false'})" class="text-blue-600 hover:text-blue-800 underline transition-colors">
+                                        ${video.transcript_text ? 'View Transcript' : 'Retrieve Transcript'}
                                     </button>
                                     <span class="text-slate-300">•</span>
                                     <button onclick="showDeleteModal('${video.video_id}')" class="text-red-600 hover:text-red-800 underline transition-colors">
@@ -658,14 +703,109 @@
             if (e.key === 'Enter') processVideo();
         });
 
-        // Close modals on escape
+        // Close modals on Escape key
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 toggleSearch();
                 closeStats();
                 closeDeleteModal();
+                closeTranscriptModal();
             }
         });
+
+        // Transcript functionality
+        let currentTranscript = '';
+
+        async function viewTranscript(videoId, hasTranscript) {
+            document.getElementById('transcriptModal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            
+            const content = document.getElementById('transcriptContent');
+            content.innerHTML = `
+                <div class="flex items-center justify-center py-8">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
+                    <p class="ml-3 text-slate-600">${hasTranscript ? 'Loading transcript...' : 'Fetching transcript...'}</p>
+                </div>
+            `;
+
+            try {
+                const action = hasTranscript ? 'get_transcript' : 'fetch_transcript';
+                const response = await fetch('/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        action: action,
+                        video_id: videoId 
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.transcript) {
+                    currentTranscript = data.transcript;
+                    content.innerHTML = `
+                        <div class="whitespace-pre-wrap text-slate-700 leading-relaxed">
+                            ${escapeHtml(data.transcript)}
+                        </div>
+                        ${data.fetched_at ? `<p class="text-xs text-slate-500 mt-4">Fetched: ${new Date(data.fetched_at).toLocaleString()}</p>` : ''}
+                    `;
+                    
+                    if (!hasTranscript) {
+                        loadVideos();
+                    }
+                } else {
+                    content.innerHTML = `
+                        <div class="text-center py-8">
+                            <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <p class="text-slate-600 font-medium">Transcript not available</p>
+                            <p class="text-sm text-slate-500 mt-2">This video may not have captions enabled.</p>
+                        </div>
+                    `;
+                    currentTranscript = '';
+                }
+            } catch (error) {
+                console.error('Transcript error:', error);
+                content.innerHTML = `
+                    <div class="text-center py-8">
+                        <p class="text-red-600 font-medium">Error loading transcript</p>
+                        <p class="text-sm text-slate-500 mt-2">${error.message}</p>
+                    </div>
+                `;
+                currentTranscript = '';
+            }
+        }
+
+        function closeTranscriptModal() {
+            document.getElementById('transcriptModal').classList.add('hidden');
+            document.body.style.overflow = 'auto';
+            currentTranscript = '';
+        }
+
+        function copyTranscript() {
+            if (!currentTranscript) return;
+            
+            navigator.clipboard.writeText(currentTranscript).then(() => {
+                const btn = document.getElementById('copyTranscriptBtn');
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                btn.classList.add('bg-green-600');
+                btn.classList.remove('bg-slate-900');
+                
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.classList.remove('bg-green-600');
+                    btn.classList.add('bg-slate-900');
+                }, 2000);
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
 
         // Delete video functionality
         let videoToDelete = null;

@@ -235,6 +235,69 @@ X-API-Key: vk_your_api_key_here
 
 ---
 
+### Get Video Transcript
+
+Retrieve the transcript for a specific video (if available).
+
+**Request:**
+```http
+GET /api/v1/videos/{video_id}/transcript
+X-API-Key: vk_your_api_key_here
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "has_transcript": true,
+  "transcript": "Full sun\n[Music]\nThat's what I do. Lord,\nI do\n[Music]\nknow.\nI don't know just\ntonight\nevery day...",
+  "fetched_at": "2025-01-15 10:45:00"
+}
+```
+
+**Response (No Transcript):**
+```json
+{
+  "success": true,
+  "has_transcript": false,
+  "transcript": null,
+  "fetched_at": null
+}
+```
+
+---
+
+### Fetch Video Transcript
+
+Retrieve and store the transcript for a video. Use this if the transcript wasn't automatically fetched during video processing.
+
+**Request:**
+```http
+POST /api/v1/videos/{video_id}/transcript
+X-API-Key: vk_your_api_key_here
+```
+
+**Response (201 Created):**
+```json
+{
+  "success": true,
+  "transcript": "Full sun\n[Music]\nThat's what I do. Lord,\nI do\n[Music]\nknow...",
+  "fetched_at": "2025-01-15 10:45:00"
+}
+```
+
+**Error Response (400):**
+```json
+{
+  "error": "Bad Request",
+  "message": "Failed to fetch transcript. Transcript may not be available for this video."
+}
+```
+
+**Note:** Not all YouTube videos have captions/transcripts available. The system will return an error if the video doesn't have captions enabled.
+
+---
+
 ### Get Videos by Channel
 
 Retrieve videos grouped by YouTube channel.

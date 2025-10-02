@@ -245,6 +245,77 @@ try {
         }
     }
     
+    // Route: GET /videos/{video_id}/transcript - Get video transcript
+    elseif ($method === 'GET' && count($pathParts) === 3 && $pathParts[0] === 'videos' && $pathParts[2] === 'transcript') {
+        $videoId = $pathParts[1];
+        $video = $videoService->getVideoByVideoId($videoId);
+        
+        if (!$video) {
+            $statusCode = 404;
+            $response = [
+                'error' => 'Not Found',
+                'message' => 'Video not found'
+            ];
+        } elseif ($video['user_id'] != $keyData['user_id']) {
+            $statusCode = 403;
+            $response = [
+                'error' => 'Forbidden',
+                'message' => 'You do not have access to this video'
+            ];
+        } else {
+            require_once 'transcript.php';
+            $transcriptService = new Transcript();
+            $transcript = $transcriptService->getTranscript($videoId);
+            
+            $response = [
+                'success' => true,
+                'has_transcript' => !empty($transcript['transcript_text']),
+                'transcript' => $transcript['transcript_text'] ?? null,
+                'fetched_at' => $transcript['transcript_fetched_at'] ?? null
+            ];
+        }
+    }
+    
+    // Route: POST /videos/{video_id}/transcript - Fetch video transcript
+    elseif ($method === 'POST' && count($pathParts) === 3 && $pathParts[0] === 'videos' && $pathParts[2] === 'transcript') {
+        $videoId = $pathParts[1];
+        $video = $videoService->getVideoByVideoId($videoId);
+        
+        if (!$video) {
+            $statusCode = 404;
+            $response = [
+                'error' => 'Not Found',
+                'message' => 'Video not found'
+            ];
+        } elseif ($video['user_id'] != $keyData['user_id']) {
+            $statusCode = 403;
+            $response = [
+                'error' => 'Forbidden',
+                'message' => 'You do not have access to this video'
+            ];
+        } else {
+            require_once 'transcript.php';
+            $transcriptService = new Transcript();
+            $result = $transcriptService->processTranscript($video['youtube_url'], $videoId);
+            
+            if (!$result) {
+                $statusCode = 400;
+                $response = [
+                    'error' => 'Bad Request',
+                    'message' => 'Failed to fetch transcript. Transcript may not be available for this video.'
+                ];
+            } else {
+                $transcript = $transcriptService->getTranscript($videoId);
+                $statusCode = 201;
+                $response = [
+                    'success' => true,
+                    'transcript' => $transcript['transcript_text'] ?? null,
+                    'fetched_at' => $transcript['transcript_fetched_at'] ?? null
+                ];
+            }
+        }
+    }
+    
     // Route: GET /me - Get current API key info
     elseif ($method === 'GET' && count($pathParts) === 1 && $pathParts[0] === 'me') {
         $response = [
