@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VidCard - YouTube Video Sharing with Rich Previews</title>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    <link rel="icon" type="image/png" href="/images/icon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -47,9 +49,12 @@
     <div class="container mx-auto px-4 py-16 max-w-6xl">
         <!-- Header -->
         <div class="text-center mb-16">
-            <h1 class="text-6xl font-bold mb-4 bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-                VidCard
-            </h1>
+            <div class="flex items-center justify-center gap-4 mb-4">
+                <img src="/images/icon.png" alt="VidCard" class="w-16 h-16">
+                <h1 class="text-6xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                    VidCard
+                </h1>
+            </div>
             <p class="text-xl text-slate-600 max-w-2xl mx-auto">
                 Create beautiful, shareable links for YouTube videos with rich social media previews
             </p>

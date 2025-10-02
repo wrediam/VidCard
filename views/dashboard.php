@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - VidCard</title>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    <link rel="icon" type="image/png" href="/images/icon.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -21,9 +23,7 @@
         <!-- Sidebar -->
         <div id="sidebar" class="w-20 bg-white border-r border-slate-200 flex flex-col transition-all duration-300 overflow-hidden">
             <div class="p-4 border-b border-slate-200 flex items-center justify-center">
-                <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-                </svg>
+                <img src="/images/icon.png" alt="VidCard" class="w-10 h-10" title="VidCard">
             </div>
             <div id="channelList" class="flex-1 overflow-y-auto p-2"></div>
         </div>
@@ -45,8 +45,9 @@
         <div class="flex-1 flex flex-col overflow-hidden">
             <!-- Header -->
             <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    <h1 class="text-2xl font-bold">VidCard</h1>
+                <div class="flex items-center gap-3">
+                    <img src="/images/icon.png" alt="VidCard" class="w-8 h-8">
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">VidCard</h1>
                 </div>
                 <div class="flex items-center gap-4">
                     <button onclick="toggleSearch()" class="text-slate-600 hover:text-slate-900">
@@ -61,7 +62,6 @@
 
             <!-- Main Area -->
             <main class="flex-1 overflow-y-auto p-6">
-                <div class="max-w-4xl mx-auto space-y-8">
                     <!-- Process Video Section -->
                     <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-8">
                         <h2 class="text-xl font-semibold mb-4">Process YouTube Video</h2>

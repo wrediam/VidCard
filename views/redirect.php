@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($video['title']); ?></title>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    <link rel="icon" type="image/png" href="/images/icon.png">
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="video">
@@ -60,8 +62,10 @@
 </head>
 <body>
     <div class="redirect-message">
+        <img src="/images/icon.png" alt="VidCard" class="w-16 h-16 mx-auto mb-4">
         <h1>Redirecting to YouTube...</h1>
         <p>If you are not redirected automatically, <a href="<?php echo htmlspecialchars($video['youtube_url']); ?>">click here</a>.</p>
+        <p class="text-xs text-slate-400 mt-4">Powered by VidCard</p>
     </div>
 </body>
 </html>
