@@ -138,7 +138,7 @@ class Auth {
      * Send email via SMTP2GO API
      */
     private function sendEmail($to, $code) {
-        $subject = 'Your VidCard Login Code';
+        $subject = 'Your VidCard Login Code: ' . $code;
         $htmlBody = $this->getEmailTemplate($code);
         
         // Use SMTP2GO API
