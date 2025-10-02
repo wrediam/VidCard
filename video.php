@@ -10,12 +10,24 @@ class Video {
     
     /**
      * Extract YouTube video ID from URL
+     * Supports: youtube.com/watch, youtu.be, youtube.com/shorts, youtube.com/embed
      */
     public function extractYoutubeId($url) {
-        $pattern = '/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i';
-        if (preg_match($pattern, $url, $match)) {
-            return $match[1];
+        // Pattern to match various YouTube URL formats including Shorts
+        $patterns = [
+            '/(?:youtube\.com\/watch\?v=)([^"&?\/\s]{11})/i',           // youtube.com/watch?v=ID
+            '/(?:youtube\.com\/shorts\/)([^"&?\/\s]{11})/i',            // youtube.com/shorts/ID
+            '/(?:youtu\.be\/)([^"&?\/\s]{11})/i',                       // youtu.be/ID
+            '/(?:youtube\.com\/embed\/)([^"&?\/\s]{11})/i',             // youtube.com/embed/ID
+            '/(?:youtube\.com\/v\/)([^"&?\/\s]{11})/i',                 // youtube.com/v/ID
+        ];
+        
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $url, $match)) {
+                return $match[1];
+            }
         }
+        
         return false;
     }
     
