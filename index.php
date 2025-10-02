@@ -5,6 +5,7 @@ require_once 'auth.php';
 require_once 'video.php';
 require_once 'api_key.php';
 require_once 'ai_posts.php';
+require_once 'ai_clips.php';
 
 // Auto-migrate database on first run
 try {
@@ -79,6 +80,20 @@ try {
         }
     } catch (Exception $e) {
         error_log('AI posts migration check: ' . $e->getMessage());
+    }
+    
+    // Run AI clips migration if needed
+    try {
+        $result = $db->query("SELECT to_regclass('public.ai_clip_suggestions')");
+        $aiClipsTableExists = $result->fetchColumn();
+        
+        if (!$aiClipsTableExists) {
+            $sql = file_get_contents(__DIR__ . '/ai_clips_migration.sql');
+            $db->exec($sql);
+            error_log('AI clip suggestions table initialized automatically');
+        }
+    } catch (Exception $e) {
+        error_log('AI clips migration check: ' . $e->getMessage());
     }
     
     // Auto-backfill channel handles for existing videos (runs once per session)
@@ -667,6 +682,83 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $aiPostsService = new AIPosts();
             $result = $aiPostsService->getPostSuggestions($videoId, $currentUser['id']);
+            
+            echo json_encode([
+                'success' => true,
+                'has_suggestions' => $result !== null,
+                'suggestions' => $result ? $result['suggestions'] : null,
+                'generated_at' => $result ? $result['generated_at'] : null
+            ]);
+            exit;
+        }
+        
+        // Route: Generate AI clip suggestions (requires auth)
+        if (isset($input['action']) && $input['action'] === 'generate_clip_suggestions') {
+            if (!$currentUser) {
+                http_response_code(401);
+                echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+                exit;
+            }
+            
+            $videoId = $input['video_id'] ?? '';
+            if (!$videoId) {
+                throw new Exception('Video ID required');
+            }
+            
+            // Verify video belongs to user
+            $videoService = new Video();
+            $video = $videoService->getVideoByVideoId($videoId);
+            
+            if (!$video || $video['user_id'] != $currentUser['id']) {
+                throw new Exception('Video not found or access denied');
+            }
+            
+            // Get transcript
+            $transcriptService = new Transcript();
+            $transcript = $transcriptService->getTranscript($videoId);
+            
+            if (!$transcript || empty($transcript['transcript_text'])) {
+                throw new Exception('Transcript not available for this video');
+            }
+            
+            // Generate clip suggestions via n8n
+            $aiClipsService = new AIClips();
+            $suggestions = $aiClipsService->generateClipSuggestions(
+                $transcript['transcript_text'],
+                $videoId,
+                $currentUser['id']
+            );
+            
+            echo json_encode([
+                'success' => true,
+                'suggestions' => $suggestions
+            ]);
+            exit;
+        }
+        
+        // Route: Get AI clip suggestions (requires auth)
+        if (isset($input['action']) && $input['action'] === 'get_clip_suggestions') {
+            if (!$currentUser) {
+                http_response_code(401);
+                echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+                exit;
+            }
+            
+            $videoId = $input['video_id'] ?? '';
+            if (!$videoId) {
+                throw new Exception('Video ID required');
+            }
+            
+            // Verify video belongs to user
+            $videoService = new Video();
+            $video = $videoService->getVideoByVideoId($videoId);
+            
+            if (!$video || $video['user_id'] != $currentUser['id']) {
+                throw new Exception('Video not found or access denied');
+            }
+            
+            $aiClipsService = new AIClips();
+            $result = $aiClipsService->getClipSuggestions($videoId, $currentUser['id']);
             
             echo json_encode([
                 'success' => true,
