@@ -23,7 +23,9 @@
         <!-- Sidebar -->
         <div id="sidebar" class="w-20 bg-white border-r border-slate-200 flex flex-col transition-all duration-300 overflow-hidden">
             <div class="p-4 border-b border-slate-200 flex items-center justify-center">
-                <img src="/images/icon.png" alt="VidCard" class="w-10 h-10" title="VidCard">
+                <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                </svg>
             </div>
             <div id="channelList" class="flex-1 overflow-y-auto p-2"></div>
         </div>
@@ -62,6 +64,7 @@
 
             <!-- Main Area -->
             <main class="flex-1 overflow-y-auto p-6">
+                <div class="max-w-4xl mx-auto space-y-8">
                     <!-- Process Video Section -->
                     <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-8">
                         <h2 class="text-xl font-semibold mb-4">Process YouTube Video</h2>
