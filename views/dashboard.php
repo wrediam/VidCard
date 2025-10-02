@@ -133,7 +133,10 @@
 
                     <!-- Videos List -->
                     <div id="videosSection" class="space-y-4">
-                        <h2 class="text-xl font-semibold">Your Videos</h2>
+                        <div class="flex items-center gap-3">
+                            <h2 class="text-xl font-semibold">Your Videos</h2>
+                            <span class="px-2 py-1 bg-slate-200 text-slate-600 text-xs rounded-full font-medium">Most Recent</span>
+                        </div>
                         <div id="videosList"></div>
                     </div>
                 </div>
@@ -317,13 +320,14 @@
                 return;
             }
             
-            // Update analytics overview
+            // Update analytics overview with all videos
             updateAnalytics(videos);
             
-            // Sort by visit count
-            videos.sort((a, b) => (b.visit_count || 0) - (a.visit_count || 0));
+            // Sort by created date (most recent first) and limit to 3
+            videos.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            const recentVideos = videos.slice(0, 3);
             
-            videos.forEach(video => {
+            recentVideos.forEach(video => {
                 const div = document.createElement('div');
                 div.className = 'bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition';
                 div.innerHTML = `
