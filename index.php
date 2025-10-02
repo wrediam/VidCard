@@ -53,14 +53,14 @@ try {
         $result = $db->query("
             SELECT column_name 
             FROM information_schema.columns 
-            WHERE table_name = 'videos' AND column_name = 'transcript_text'
+            WHERE table_name = 'videos' AND column_name = 'transcript_unavailable'
         ");
-        $transcriptColumnExists = $result->fetchColumn();
+        $transcriptUnavailableExists = $result->fetchColumn();
         
-        if (!$transcriptColumnExists) {
+        if (!$transcriptUnavailableExists) {
             $sql = file_get_contents(__DIR__ . '/transcript_migration.sql');
             $db->exec($sql);
-            error_log('Transcript columns initialized automatically');
+            error_log('Transcript columns updated automatically (added unavailable flag)');
         }
     } catch (Exception $e) {
         error_log('Transcript migration check: ' . $e->getMessage());
