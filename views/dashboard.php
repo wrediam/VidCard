@@ -197,6 +197,38 @@
         </div>
     </div>
 
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="p-6">
+                <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
+                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-semibold text-center mb-2">Delete Video?</h3>
+                <p class="text-sm text-slate-600 text-center mb-6">
+                    This will permanently delete this video. <strong class="text-red-600">Any shared links will stop working immediately.</strong> This action cannot be undone.
+                </p>
+                <div class="flex gap-3">
+                    <button 
+                        onclick="closeDeleteModal()" 
+                        class="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition font-medium"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        onclick="confirmDelete()" 
+                        id="confirmDeleteBtn"
+                        class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium"
+                    >
+                        Delete Video
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         let channels = {};
         let currentChannelName = null;
@@ -295,6 +327,9 @@
                                         <button onclick="event.stopPropagation(); copyVideoUrl('${video.video_id}', event)" class="text-slate-600 hover:text-slate-900 underline">
                                             Copy
                                         </button>
+                                        <button onclick="event.stopPropagation(); showDeleteModal('${video.video_id}')" class="text-red-600 hover:text-red-800 underline">
+                                            Delete
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -353,6 +388,10 @@
                                 <span>•</span>
                                 <button onclick="copyVideoUrl('${video.video_id}', event)" class="text-slate-600 hover:text-slate-900 underline transition-colors">
                                     Copy Link
+                                </button>
+                                <span>•</span>
+                                <button onclick="showDeleteModal('${video.video_id}')" class="text-red-600 hover:text-red-800 underline transition-colors">
+                                    Delete
                                 </button>
                             </div>
                         </div>
@@ -588,8 +627,57 @@
             if (e.key === 'Escape') {
                 toggleSearch();
                 closeStats();
+                closeDeleteModal();
             }
         });
+
+        // Delete video functionality
+        let videoToDelete = null;
+
+        function showDeleteModal(videoId) {
+            videoToDelete = videoId;
+            document.getElementById('deleteModal').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            videoToDelete = null;
+            document.getElementById('deleteModal').classList.add('hidden');
+        }
+
+        async function confirmDelete() {
+            if (!videoToDelete) return;
+
+            const btn = document.getElementById('confirmDeleteBtn');
+            btn.disabled = true;
+            btn.textContent = 'Deleting...';
+
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        action: 'delete_video',
+                        video_id: videoToDelete 
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    closeDeleteModal();
+                    loadVideos(); // Reload the video list
+                    closeChannelPanel(); // Close channel panel if open
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to delete video'));
+                }
+            } catch (error) {
+                console.error('Delete error:', error);
+                alert('Network error. Please try again.');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Delete Video';
+            }
+        }
     </script>
 </body>
 </html>

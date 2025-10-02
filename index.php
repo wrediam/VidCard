@@ -282,6 +282,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
         
+        // Route: Delete video (user owns it or admin)
+        if (isset($input['action']) && $input['action'] === 'delete_video') {
+            if (!$currentUser) {
+                http_response_code(401);
+                echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+                exit;
+            }
+            
+            $videoId = $input['video_id'] ?? '';
+            if (!$videoId) {
+                throw new Exception('Video ID required');
+            }
+            
+            $db = getDB();
+            
+            // Check if user owns the video or is admin
+            $stmt = $db->prepare('SELECT user_id FROM videos WHERE video_id = :video_id');
+            $stmt->execute(['video_id' => $videoId]);
+            $video = $stmt->fetch();
+            
+            if (!$video) {
+                throw new Exception('Video not found');
+            }
+            
+            $isAdmin = $currentUser['email'] === 'will@wredia.com';
+            $isOwner = $video['user_id'] == $currentUser['id'];
+            
+            if (!$isOwner && !$isAdmin) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'error' => 'Forbidden']);
+                exit;
+            }
+            
+            // Delete the video (cascade will delete visits)
+            $stmt = $db->prepare('DELETE FROM videos WHERE video_id = :video_id');
+            $stmt->execute(['video_id' => $videoId]);
+            
+            echo json_encode(['success' => true, 'message' => 'Video deleted successfully']);
+            exit;
+        }
+        
         throw new Exception('Invalid action');
         
     } catch (Exception $e) {
@@ -303,7 +344,7 @@ if (isset($params['v'])) {
     
     if (!$video) {
         http_response_code(404);
-        echo "Video not found";
+        include 'views/404.php';
         exit;
     }
     

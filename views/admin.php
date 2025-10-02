@@ -220,7 +220,7 @@
                                         <span>Added ${formatDate(video.created_at)}</span>
                                         ${video.last_viewed ? `<span>Last viewed ${formatDate(video.last_viewed)}</span>` : ''}
                                     </div>
-                                    <div class="mt-2">
+                                    <div class="flex items-center gap-3 mt-2">
                                         <a 
                                             href="/?v=${video.video_id}" 
                                             target="_blank"
@@ -228,6 +228,12 @@
                                         >
                                             View Share Link →
                                         </a>
+                                        <button 
+                                            onclick="deleteVideo('${video.video_id}')"
+                                            class="text-sm text-red-600 hover:text-red-800 font-medium"
+                                        >
+                                            Delete
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -263,6 +269,40 @@
                 console.error('Logout error:', error);
             }
             window.location.href = '/';
+        }
+
+        async function deleteVideo(videoId) {
+            if (!confirm('Are you sure you want to delete this video? This will break any shared links and cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        action: 'delete_video',
+                        video_id: videoId 
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Reload the current user's videos
+                    if (selectedUserId) {
+                        const userEmail = document.getElementById('videosTitle').textContent;
+                        selectUser(selectedUserId, userEmail);
+                    }
+                    // Reload users list to update video counts
+                    loadUsers();
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to delete video'));
+                }
+            } catch (error) {
+                console.error('Delete error:', error);
+                alert('Network error. Please try again.');
+            }
         }
     </script>
 </body>
