@@ -533,7 +533,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'success' => true,
                 'has_transcript' => !empty($transcript['transcript_text']),
                 'transcript' => $transcript['transcript_text'] ?? null,
-                'fetched_at' => $transcript['transcript_fetched_at'] ?? null
+                'fetched_at' => $transcript['transcript_fetched_at'] ?? null,
+                'unavailable' => $transcript['transcript_unavailable'] ?? false
             ]);
             exit;
         }
@@ -563,7 +564,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $result = $transcriptService->processTranscript($video['youtube_url'], $videoId);
             
             if (!$result) {
-                throw new Exception('Failed to fetch transcript. Transcript may not be available for this video.');
+                // Transcript was marked as unavailable
+                echo json_encode([
+                    'success' => true,
+                    'unavailable' => true,
+                    'transcript' => null,
+                    'fetched_at' => null
+                ]);
+                exit;
             }
             
             $transcript = $transcriptService->getTranscript($videoId);
@@ -571,7 +579,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo json_encode([
                 'success' => true,
                 'transcript' => $transcript['transcript_text'] ?? null,
-                'fetched_at' => $transcript['transcript_fetched_at'] ?? null
+                'fetched_at' => $transcript['transcript_fetched_at'] ?? null,
+                'unavailable' => false
             ]);
             exit;
         }

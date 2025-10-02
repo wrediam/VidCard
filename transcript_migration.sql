@@ -5,7 +5,8 @@
 ALTER TABLE videos 
 ADD COLUMN IF NOT EXISTS transcript_raw JSONB,
 ADD COLUMN IF NOT EXISTS transcript_text TEXT,
-ADD COLUMN IF NOT EXISTS transcript_fetched_at TIMESTAMP;
+ADD COLUMN IF NOT EXISTS transcript_fetched_at TIMESTAMP,
+ADD COLUMN IF NOT EXISTS transcript_unavailable BOOLEAN DEFAULT FALSE;
 
 -- Create index for faster transcript queries
 CREATE INDEX IF NOT EXISTS idx_videos_transcript_text ON videos USING gin(to_tsvector('english', transcript_text));
@@ -15,3 +16,4 @@ CREATE INDEX IF NOT EXISTS idx_videos_has_transcript ON videos((transcript_text 
 COMMENT ON COLUMN videos.transcript_raw IS 'Raw YouTube caption data in JSON format';
 COMMENT ON COLUMN videos.transcript_text IS 'Extracted plain text transcript without timestamps';
 COMMENT ON COLUMN videos.transcript_fetched_at IS 'Timestamp when transcript was last fetched';
+COMMENT ON COLUMN videos.transcript_unavailable IS 'Flag indicating transcript is not available for this video';

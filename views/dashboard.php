@@ -374,9 +374,12 @@
                                                 Copy
                                             </button>
                                             <span class="text-slate-300">•</span>
-                                            <button onclick="event.stopPropagation(); viewTranscript('${video.video_id}', ${video.transcript_text ? 'true' : 'false'})" class="text-blue-600 hover:text-blue-800 underline">
-                                                ${video.transcript_text ? 'View Transcript' : 'Retrieve Transcript'}
-                                            </button>
+                                            ${video.transcript_unavailable ? 
+                                                '<span class="text-slate-400 cursor-not-allowed">Transcript Unavailable</span>' : 
+                                                `<button onclick="event.stopPropagation(); viewTranscript('${video.video_id}', ${video.transcript_text ? 'true' : 'false'})" class="text-blue-600 hover:text-blue-800 underline">
+                                                    ${video.transcript_text ? 'View Transcript' : 'Retrieve Transcript'}
+                                                </button>`
+                                            }
                                             <span class="text-slate-300">•</span>
                                             <button onclick="event.stopPropagation(); showDeleteModal('${video.video_id}')" class="text-red-600 hover:text-red-800 underline">
                                                 Delete
@@ -445,9 +448,12 @@
                                         Copy
                                     </button>
                                     <span class="text-slate-300">•</span>
-                                    <button onclick="viewTranscript('${video.video_id}', ${video.transcript_text ? 'true' : 'false'})" class="text-blue-600 hover:text-blue-800 underline transition-colors">
-                                        ${video.transcript_text ? 'View Transcript' : 'Retrieve Transcript'}
-                                    </button>
+                                    ${video.transcript_unavailable ? 
+                                        '<span class="text-slate-400 cursor-not-allowed">Transcript Unavailable</span>' : 
+                                        `<button onclick="viewTranscript('${video.video_id}', ${video.transcript_text ? 'true' : 'false'})" class="text-blue-600 hover:text-blue-800 underline transition-colors">
+                                            ${video.transcript_text ? 'View Transcript' : 'Retrieve Transcript'}
+                                        </button>`
+                                    }
                                     <span class="text-slate-300">•</span>
                                     <button onclick="showDeleteModal('${video.video_id}')" class="text-red-600 hover:text-red-800 underline transition-colors">
                                         Delete
@@ -740,6 +746,13 @@
                 });
 
                 const data = await response.json();
+
+                if (data.success && data.unavailable) {
+                    // Transcript is unavailable - close modal and reload videos to update UI
+                    closeTranscriptModal();
+                    loadVideos();
+                    return;
+                }
 
                 if (data.success && data.transcript) {
                     currentTranscript = data.transcript;

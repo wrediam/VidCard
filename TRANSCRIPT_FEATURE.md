@@ -21,6 +21,7 @@ This key is already included in `.env.example` and configured in `config.php`. W
 - **`transcript_raw`** (JSONB) - Stores complete YouTube caption data
 - **`transcript_text`** (TEXT) - Clean, readable transcript without timestamps
 - **`transcript_fetched_at`** (TIMESTAMP) - When transcript was retrieved
+- **`transcript_unavailable`** (BOOLEAN) - Flag indicating transcript is not available
 - Full-text search index on transcript_text
 - Auto-migration on application startup
 
@@ -29,13 +30,15 @@ This key is already included in `.env.example` and configured in `config.php`. W
 - `fetchTranscript()` - Retrieves captions from vid.wredia.com API
 - `extractCleanText()` - Parses complex JSON structure to plain text
 - `saveTranscript()` - Stores both raw and clean versions
-- `getTranscript()` - Retrieves stored transcript
-- `processTranscript()` - End-to-end fetch and save
+- `markUnavailable()` - Marks video as having no transcript available
+- `getTranscript()` - Retrieves stored transcript with unavailable flag
+- `processTranscript()` - End-to-end fetch and save (marks unavailable on failure)
 - `hasTranscript()` - Check if transcript exists
 
 **`video.php`** - Integrated with video processing:
 - Automatically attempts transcript fetch when saving new videos
 - Non-blocking (doesn't fail video save if transcript unavailable)
+- Marks videos as unavailable if transcript cannot be fetched
 - Logs errors for debugging
 
 ### ✅ API Endpoints
@@ -55,16 +58,18 @@ POST /api/v1/videos/{video_id}/transcript  - Fetch new transcript
 All endpoints:
 - Require authentication
 - Verify video ownership
-- Return JSON with transcript text and metadata
-- Handle missing transcripts gracefully
+- Return JSON with transcript text, metadata, and `unavailable` flag
+- Mark videos as unavailable when transcripts cannot be fetched
+- Prevent repeated fetch attempts for unavailable transcripts
 
 ### ✅ Dashboard UI
 
 **Transcript Button:**
 - Shows "View Transcript" if transcript exists
 - Shows "Retrieve Transcript" if not yet fetched
+- Shows "Transcript Unavailable" (grayed out, non-clickable) if transcript cannot be fetched
 - Appears on all video cards (grid and list views)
-- Blue color to distinguish from other actions
+- Blue color for active buttons, gray for unavailable
 
 **Transcript Modal:**
 - Full-screen overlay with scrollable content
@@ -78,8 +83,10 @@ All endpoints:
 1. Video processed → Transcript auto-fetched (if available)
 2. User clicks "View Transcript" → Modal opens instantly
 3. User clicks "Retrieve Transcript" → Fetches, then displays
-4. User can copy transcript with one click
-5. Button updates to "View Transcript" after successful fetch
+4. If transcript unavailable → Button changes to "Transcript Unavailable" (non-clickable)
+5. User can copy transcript with one click
+6. Button updates to "View Transcript" after successful fetch
+7. No repeated fetch attempts for unavailable transcripts
 
 ## Technical Details
 
@@ -103,15 +110,16 @@ The extraction function:
 4. Returns clean, readable text
 
 ### Error Handling
-- **No captions available:** Shows friendly message
-- **API timeout:** 10-second timeout, logs error
-- **Network failure:** Displays error in modal
-- **Invalid response:** Handles gracefully, doesn't break UI
+- **No captions available:** Marks video as unavailable, prevents retry
+- **API timeout:** 10-second timeout, marks as unavailable, logs error
+- **Network failure:** Marks as unavailable, displays error in modal
+- **Invalid response:** Marks as unavailable, handles gracefully
+- **Unavailable flag:** Persisted in database to prevent repeated failed attempts
 
 ## Database Migration
 
 The migration runs automatically on first page load after deployment. It:
-1. Adds three new columns to `videos` table
+1. Adds four new columns to `videos` table (raw, text, fetched_at, unavailable)
 2. Creates full-text search index
 3. Creates performance index for has_transcript queries
 4. Adds column comments for documentation

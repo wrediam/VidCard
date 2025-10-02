@@ -110,7 +110,8 @@ class Transcript {
                 'UPDATE videos 
                  SET transcript_raw = :raw, 
                      transcript_text = :text,
-                     transcript_fetched_at = NOW()
+                     transcript_fetched_at = NOW(),
+                     transcript_unavailable = FALSE
                  WHERE video_id = :video_id'
             );
             
@@ -127,12 +128,32 @@ class Transcript {
     }
     
     /**
+     * Mark transcript as unavailable
+     */
+    public function markUnavailable($videoId) {
+        try {
+            $stmt = $this->db->prepare(
+                'UPDATE videos 
+                 SET transcript_unavailable = TRUE,
+                     transcript_fetched_at = NOW()
+                 WHERE video_id = :video_id'
+            );
+            
+            return $stmt->execute(['video_id' => $videoId]);
+            
+        } catch (Exception $e) {
+            error_log('Transcript mark unavailable error: ' . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
      * Get transcript for a video
      */
     public function getTranscript($videoId) {
         try {
             $stmt = $this->db->prepare(
-                'SELECT transcript_raw, transcript_text, transcript_fetched_at 
+                'SELECT transcript_raw, transcript_text, transcript_fetched_at, transcript_unavailable 
                  FROM videos 
                  WHERE video_id = :video_id'
             );
@@ -153,12 +174,16 @@ class Transcript {
         $captionData = $this->fetchTranscript($youtubeUrl, $videoId);
         
         if (!$captionData) {
+            // Mark as unavailable so we don't keep trying
+            $this->markUnavailable($videoId);
             return false;
         }
         
         $cleanText = $this->extractCleanText($captionData);
         
         if (empty($cleanText)) {
+            // Mark as unavailable if extraction failed
+            $this->markUnavailable($videoId);
             return false;
         }
         

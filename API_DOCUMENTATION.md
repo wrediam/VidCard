@@ -251,7 +251,8 @@ X-API-Key: vk_your_api_key_here
   "success": true,
   "has_transcript": true,
   "transcript": "Full sun\n[Music]\nThat's what I do. Lord,\nI do\n[Music]\nknow.\nI don't know just\ntonight\nevery day...",
-  "fetched_at": "2025-01-15 10:45:00"
+  "fetched_at": "2025-01-15 10:45:00",
+  "unavailable": false
 }
 ```
 
@@ -261,7 +262,19 @@ X-API-Key: vk_your_api_key_here
   "success": true,
   "has_transcript": false,
   "transcript": null,
-  "fetched_at": null
+  "fetched_at": null,
+  "unavailable": false
+}
+```
+
+**Response (Transcript Unavailable):**
+```json
+{
+  "success": true,
+  "has_transcript": false,
+  "transcript": null,
+  "fetched_at": "2025-01-15 10:45:00",
+  "unavailable": true
 }
 ```
 
@@ -282,19 +295,22 @@ X-API-Key: vk_your_api_key_here
 {
   "success": true,
   "transcript": "Full sun\n[Music]\nThat's what I do. Lord,\nI do\n[Music]\nknow...",
-  "fetched_at": "2025-01-15 10:45:00"
+  "fetched_at": "2025-01-15 10:45:00",
+  "unavailable": false
 }
 ```
 
-**Error Response (400):**
+**Response (Transcript Unavailable):**
 ```json
 {
-  "error": "Bad Request",
-  "message": "Failed to fetch transcript. Transcript may not be available for this video."
+  "success": true,
+  "transcript": null,
+  "fetched_at": null,
+  "unavailable": true
 }
 ```
 
-**Note:** Not all YouTube videos have captions/transcripts available. The system will return an error if the video doesn't have captions enabled.
+**Note:** Not all YouTube videos have captions/transcripts available. When a transcript cannot be fetched, the video is marked as `unavailable: true` to prevent repeated fetch attempts. The UI will display "Transcript Unavailable" for these videos.
 
 ---
 
