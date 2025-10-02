@@ -317,13 +317,12 @@
                                         ${video.last_viewed ? `<span>Last viewed ${formatDate(video.last_viewed)}</span>` : ''}
                                     </div>
                                     <div class="flex items-center gap-3 mt-2">
-                                        <a 
-                                            href="/?v=${video.video_id}" 
-                                            target="_blank"
-                                            class="text-sm text-blue-600 hover:text-blue-800"
+                                        <button 
+                                            onclick="copyVideoLink('${video.video_id}', event)"
+                                            class="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
                                         >
-                                            View Share Link →
-                                        </a>
+                                            Copy Link
+                                        </button>
                                         <button 
                                             onclick="deleteVideo('${video.video_id}')"
                                             class="text-sm text-red-600 hover:text-red-800 font-medium"
@@ -369,6 +368,26 @@
                 console.error('Logout error:', error);
             }
             window.location.href = '/';
+        }
+
+        function copyVideoLink(videoId, event) {
+            const url = `<?php echo APP_URL; ?>/?v=${videoId}`;
+            navigator.clipboard.writeText(url).then(() => {
+                const button = event.target;
+                const originalText = button.textContent;
+                button.textContent = '✓ Copied!';
+                button.classList.remove('text-blue-600', 'hover:text-blue-800');
+                button.classList.add('text-green-600', 'font-semibold');
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('text-green-600', 'font-semibold');
+                    button.classList.add('text-blue-600', 'hover:text-blue-800');
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy link');
+            });
         }
 
         // Delete video modal state

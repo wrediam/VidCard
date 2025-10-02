@@ -312,24 +312,30 @@
                 </div>
                 <div class="space-y-3">
                     ${channel.videos.map(video => `
-                        <div class="bg-slate-50 rounded-lg p-3 hover:bg-slate-100 transition">
+                        <div class="bg-slate-50 rounded-lg p-4 hover:bg-slate-100 transition">
                             <div class="flex gap-3">
-                                <img src="${video.thumbnail_url}" class="w-24 h-16 object-cover rounded flex-shrink-0" />
-                                <div class="flex-1 min-w-0">
-                                    <h4 class="font-medium text-sm mb-1 line-clamp-2">${video.title}</h4>
-                                    <div class="flex items-center gap-2 text-xs">
-                                        <span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium">
-                                            ${video.visit_count || 0} clicks
-                                        </span>
-                                        <button onclick="event.stopPropagation(); showStats('${video.video_id}')" class="text-slate-600 hover:text-slate-900 underline">
-                                            Stats
-                                        </button>
-                                        <button onclick="event.stopPropagation(); copyVideoUrl('${video.video_id}', event)" class="text-slate-600 hover:text-slate-900 underline">
-                                            Copy
-                                        </button>
-                                        <button onclick="event.stopPropagation(); showDeleteModal('${video.video_id}')" class="text-red-600 hover:text-red-800 underline">
-                                            Delete
-                                        </button>
+                                <img src="${video.thumbnail_url}" class="w-32 h-20 object-cover rounded flex-shrink-0" />
+                                <div class="flex-1 min-w-0 flex flex-col">
+                                    <h4 class="font-medium text-sm mb-2 line-clamp-2">${video.title}</h4>
+                                    <div class="mt-auto">
+                                        <div class="mb-2">
+                                            <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-medium text-xs">
+                                                ${video.visit_count || 0} clicks
+                                            </span>
+                                        </div>
+                                        <div class="flex items-center gap-2 text-xs flex-wrap">
+                                            <button onclick="event.stopPropagation(); showStats('${video.video_id}')" class="text-slate-600 hover:text-slate-900 underline">
+                                                Stats
+                                            </button>
+                                            <span class="text-slate-300">•</span>
+                                            <button onclick="event.stopPropagation(); copyVideoUrl('${video.video_id}', event)" class="text-slate-600 hover:text-slate-900 underline">
+                                                Copy
+                                            </button>
+                                            <span class="text-slate-300">•</span>
+                                            <button onclick="event.stopPropagation(); showDeleteModal('${video.video_id}')" class="text-red-600 hover:text-red-800 underline">
+                                                Delete
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -371,28 +377,32 @@
             
             recentVideos.forEach(video => {
                 const div = document.createElement('div');
-                div.className = 'bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition';
+                div.className = 'bg-white border border-slate-200 rounded-lg p-5 hover:shadow-md transition';
                 div.innerHTML = `
                     <div class="flex gap-4">
-                        <img src="${video.thumbnail_url}" class="w-40 h-24 object-cover rounded" />
-                        <div class="flex-1 min-w-0">
-                            <h3 class="font-semibold mb-1 truncate">${video.title}</h3>
-                            <p class="text-sm text-slate-600 mb-2">${video.channel_name}</p>
-                            <div class="flex items-center gap-2 text-xs">
-                                <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
-                                    ${video.visit_count || 0} clicks
-                                </span>
-                                <button onclick="showStats('${video.video_id}')" class="text-slate-600 hover:text-slate-900 underline">
-                                    View Analytics
-                                </button>
-                                <span>•</span>
-                                <button onclick="copyVideoUrl('${video.video_id}', event)" class="text-slate-600 hover:text-slate-900 underline transition-colors">
-                                    Copy Link
-                                </button>
-                                <span>•</span>
-                                <button onclick="showDeleteModal('${video.video_id}')" class="text-red-600 hover:text-red-800 underline transition-colors">
-                                    Delete
-                                </button>
+                        <img src="${video.thumbnail_url}" class="w-48 h-28 object-cover rounded flex-shrink-0" />
+                        <div class="flex-1 min-w-0 flex flex-col">
+                            <h3 class="font-semibold mb-1 line-clamp-2 text-base">${video.title}</h3>
+                            <p class="text-sm text-slate-600 mb-3">${video.channel_name}</p>
+                            <div class="mt-auto">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-medium text-sm">
+                                        ${video.visit_count || 0} clicks
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-3 text-sm flex-wrap">
+                                    <button onclick="showStats('${video.video_id}')" class="text-slate-600 hover:text-slate-900 underline">
+                                        Stats
+                                    </button>
+                                    <span class="text-slate-300">•</span>
+                                    <button onclick="copyVideoUrl('${video.video_id}', event)" class="text-slate-600 hover:text-slate-900 underline transition-colors">
+                                        Copy
+                                    </button>
+                                    <span class="text-slate-300">•</span>
+                                    <button onclick="showDeleteModal('${video.video_id}')" class="text-red-600 hover:text-red-800 underline transition-colors">
+                                        Delete
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
