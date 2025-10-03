@@ -412,6 +412,71 @@
                                 <div id="clipEmbed" class="relative" style="padding-bottom: 56.25%; height: 0;">
                                     <!-- Embed will be inserted here -->
                                 </div>
+                                
+                                <!-- Interactive Timeline -->
+                                <div class="p-4 bg-slate-50 border-t border-slate-200">
+                                    <div class="mb-3">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <label class="text-xs font-semibold text-slate-700">Adjust Clip Timing</label>
+                                            <div class="flex items-center gap-3 text-xs text-slate-600">
+                                                <span id="clipStartLabel" class="font-mono">0:00</span>
+                                                <span>→</span>
+                                                <span id="clipEndLabel" class="font-mono">0:00</span>
+                                                <span class="text-slate-400">|</span>
+                                                <span id="clipDurationLabel" class="font-medium">0s</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Timeline Container -->
+                                        <div class="relative">
+                                            <!-- Full video timeline bar -->
+                                            <div class="relative h-12 bg-slate-200 rounded-lg overflow-hidden cursor-pointer" id="timelineBar">
+                                                <!-- Highlighted clip segment -->
+                                                <div 
+                                                    id="clipSegment" 
+                                                    class="absolute top-0 h-full bg-gradient-to-r from-orange-400 to-red-500 opacity-80 transition-all duration-150"
+                                                    style="left: 0%; width: 100%;"
+                                                >
+                                                    <!-- Start handle -->
+                                                    <div 
+                                                        id="startHandle" 
+                                                        class="absolute left-0 top-0 h-full w-3 bg-orange-600 cursor-ew-resize hover:bg-orange-700 transition-colors flex items-center justify-center group"
+                                                        draggable="false"
+                                                    >
+                                                        <div class="w-0.5 h-6 bg-white opacity-70 group-hover:opacity-100"></div>
+                                                    </div>
+                                                    
+                                                    <!-- End handle -->
+                                                    <div 
+                                                        id="endHandle" 
+                                                        class="absolute right-0 top-0 h-full w-3 bg-red-600 cursor-ew-resize hover:bg-red-700 transition-colors flex items-center justify-center group"
+                                                        draggable="false"
+                                                    >
+                                                        <div class="w-0.5 h-6 bg-white opacity-70 group-hover:opacity-100"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Time markers -->
+                                            <div class="flex justify-between mt-1 text-xs text-slate-500 px-1">
+                                                <span>0:00</span>
+                                                <span id="videoEndTime">0:00</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Download Button -->
+                                    <button 
+                                        onclick="downloadClip()"
+                                        id="downloadClipBtn"
+                                        class="w-full px-4 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-medium hover:from-green-700 hover:to-emerald-700 transition shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                                    >
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                                        </svg>
+                                        Download Clip
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1597,6 +1662,11 @@
         // Clip suggestions state
         let allClips = [];
         let currentClipIndex = 0;
+        let videoDuration = 0; // Total video duration in seconds
+        let clipStartTime = 0; // Current clip start in seconds
+        let clipEndTime = 0;   // Current clip end in seconds
+        let isDragging = false;
+        let dragType = null; // 'start' or 'end'
 
         // Clip Suggestions Modal Functions
         async function handleClipSuggestions() {
@@ -1791,6 +1861,14 @@
             const endSeconds = clip.end_time;
             const durationSeconds = endSeconds - startSeconds;
             
+            // Set global clip times
+            clipStartTime = startSeconds;
+            clipEndTime = endSeconds;
+            
+            // Get video duration from YouTube API or estimate
+            // For now, we'll use a reasonable estimate based on clip end time
+            videoDuration = Math.max(endSeconds + 60, 300); // At least 5 minutes or clip end + 1 minute
+            
             // Format time display
             const formatTime = (seconds) => {
                 const mins = Math.floor(seconds / 60);
@@ -1805,16 +1883,10 @@
             document.querySelector('#clipTimestamp span').textContent = `${formatTime(startSeconds)} - ${formatTime(endSeconds)}`;
             
             // Update YouTube embed with start and end parameters
-            const embedUrl = `https://www.youtube.com/embed/${currentVideoData.video_id}?start=${startSeconds}&end=${endSeconds}&autoplay=0`;
-            document.getElementById('clipEmbed').innerHTML = `
-                <iframe 
-                    src="${embedUrl}"
-                    frameborder="0" 
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                    allowfullscreen
-                    class="absolute top-0 left-0 w-full h-full"
-                ></iframe>
-            `;
+            updateClipEmbed();
+            
+            // Initialize timeline
+            initializeTimeline();
             
             // Update counter
             document.getElementById('currentClipIndex').textContent = index + 1;
@@ -1845,6 +1917,201 @@
                 .replace(/>/g, '&gt;')
                 .replace(/\n/g, ' ')
                 .replace(/\r/g, '');
+        }
+
+        // Timeline Functions
+        function initializeTimeline() {
+            const formatTime = (seconds) => {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            };
+            
+            // Update timeline UI
+            updateTimelineUI();
+            
+            // Update time labels
+            document.getElementById('clipStartLabel').textContent = formatTime(clipStartTime);
+            document.getElementById('clipEndLabel').textContent = formatTime(clipEndTime);
+            document.getElementById('clipDurationLabel').textContent = `${clipEndTime - clipStartTime}s`;
+            document.getElementById('videoEndTime').textContent = formatTime(videoDuration);
+            
+            // Setup drag handlers
+            setupTimelineDragHandlers();
+        }
+
+        function updateTimelineUI() {
+            const startPercent = (clipStartTime / videoDuration) * 100;
+            const endPercent = (clipEndTime / videoDuration) * 100;
+            const widthPercent = endPercent - startPercent;
+            
+            const clipSegment = document.getElementById('clipSegment');
+            clipSegment.style.left = `${startPercent}%`;
+            clipSegment.style.width = `${widthPercent}%`;
+        }
+
+        function setupTimelineDragHandlers() {
+            const startHandle = document.getElementById('startHandle');
+            const endHandle = document.getElementById('endHandle');
+            const timelineBar = document.getElementById('timelineBar');
+            
+            // Start handle drag
+            startHandle.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                isDragging = true;
+                dragType = 'start';
+                document.body.style.cursor = 'ew-resize';
+            });
+            
+            // End handle drag
+            endHandle.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                isDragging = true;
+                dragType = 'end';
+                document.body.style.cursor = 'ew-resize';
+            });
+            
+            // Mouse move
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                
+                const rect = timelineBar.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const percent = Math.max(0, Math.min(1, x / rect.width));
+                const newTime = Math.round(percent * videoDuration);
+                
+                if (dragType === 'start') {
+                    // Don't allow start to go past end (keep 1 second minimum)
+                    clipStartTime = Math.min(newTime, clipEndTime - 1);
+                } else if (dragType === 'end') {
+                    // Don't allow end to go before start (keep 1 second minimum)
+                    clipEndTime = Math.max(newTime, clipStartTime + 1);
+                }
+                
+                updateTimelineUI();
+                updateTimeLabels();
+            });
+            
+            // Mouse up
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    dragType = null;
+                    document.body.style.cursor = 'default';
+                    
+                    // Update embed with new times
+                    updateClipEmbed();
+                    
+                    // Save edit to backend
+                    saveClipEdit();
+                }
+            });
+        }
+
+        function updateTimeLabels() {
+            const formatTime = (seconds) => {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            };
+            
+            document.getElementById('clipStartLabel').textContent = formatTime(clipStartTime);
+            document.getElementById('clipEndLabel').textContent = formatTime(clipEndTime);
+            document.getElementById('clipDurationLabel').textContent = `${clipEndTime - clipStartTime}s`;
+        }
+
+        function updateClipEmbed() {
+            if (!currentVideoData) return;
+            
+            const embedUrl = `https://www.youtube.com/embed/${currentVideoData.video_id}?start=${clipStartTime}&end=${clipEndTime}&autoplay=0`;
+            document.getElementById('clipEmbed').innerHTML = `
+                <iframe 
+                    src="${embedUrl}"
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen
+                    class="absolute top-0 left-0 w-full h-full"
+                ></iframe>
+            `;
+        }
+
+        async function saveClipEdit() {
+            if (!currentVideoData || currentClipIndex === null) return;
+            
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'save_clip_edit',
+                        video_id: currentVideoData.video_id,
+                        clip_index: currentClipIndex,
+                        start_time: clipStartTime,
+                        end_time: clipEndTime
+                    })
+                });
+                
+                const data = await response.json();
+                if (!data.success) {
+                    console.error('Failed to save clip edit:', data.error);
+                }
+            } catch (error) {
+                console.error('Error saving clip edit:', error);
+            }
+        }
+
+        async function downloadClip() {
+            if (!currentVideoData) return;
+            
+            const btn = document.getElementById('downloadClipBtn');
+            const originalHTML = btn.innerHTML;
+            
+            btn.disabled = true;
+            btn.innerHTML = `
+                <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Processing...</span>
+            `;
+            
+            try {
+                const response = await fetch('/download_clip.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        video_id: currentVideoData.video_id,
+                        start_time: clipStartTime,
+                        end_time: clipEndTime,
+                        clip_index: currentClipIndex,
+                        resolution: '1080p'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.download_url) {
+                    // Open download link in new tab
+                    window.open(data.download_url, '_blank');
+                    
+                    showToast('Clip download started! Check your downloads folder.', 'success');
+                    
+                    // Reset button after short delay
+                    setTimeout(() => {
+                        btn.innerHTML = originalHTML;
+                        btn.disabled = false;
+                    }, 2000);
+                } else {
+                    showToast('Error: ' + (data.error || 'Failed to download clip'), 'error');
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Download error:', error);
+                showToast('Network error. Please try again.', 'error');
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }
         }
 
         // Delete video functionality

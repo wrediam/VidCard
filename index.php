@@ -96,6 +96,20 @@ try {
         error_log('AI clips migration check: ' . $e->getMessage());
     }
     
+    // Run AI clip edits migration if needed
+    try {
+        $result = $db->query("SELECT to_regclass('public.ai_clip_edits')");
+        $clipEditsTableExists = $result->fetchColumn();
+        
+        if (!$clipEditsTableExists) {
+            $sql = file_get_contents(__DIR__ . '/clip_edits_migration.sql');
+            $db->exec($sql);
+            error_log('AI clip edits table initialized automatically');
+        }
+    } catch (Exception $e) {
+        error_log('Clip edits migration check: ' . $e->getMessage());
+    }
+    
     // Auto-backfill channel handles for existing videos (runs once per session)
     if (!isset($_SESSION['handles_backfilled'])) {
         $stmt = $db->query("SELECT COUNT(*) FROM videos WHERE channel_handle IS NULL OR channel_handle = ''");
@@ -791,6 +805,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'suggestions' => $result ? $result['suggestions'] : null,
                 'generated_at' => $result ? $result['generated_at'] : null
             ]);
+            exit;
+        }
+        
+        // Route: Save clip edit (requires auth)
+        if (isset($input['action']) && $input['action'] === 'save_clip_edit') {
+            if (!$currentUser) {
+                http_response_code(401);
+                echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+                exit;
+            }
+            
+            $videoId = $input['video_id'] ?? '';
+            $clipIndex = $input['clip_index'] ?? null;
+            $startTime = $input['start_time'] ?? null;
+            $endTime = $input['end_time'] ?? null;
+            
+            if (!$videoId || $clipIndex === null || $startTime === null || $endTime === null) {
+                throw new Exception('Missing required fields');
+            }
+            
+            // Verify video belongs to user
+            $videoService = new Video();
+            $video = $videoService->getVideoByVideoId($videoId);
+            
+            if (!$video || $video['user_id'] != $currentUser['id']) {
+                throw new Exception('Video not found or access denied');
+            }
+            
+            // Get original clip suggestion
+            $aiClipsService = new AIClips();
+            $result = $aiClipsService->getClipSuggestions($videoId, $currentUser['id']);
+            
+            if (!$result || !isset($result['suggestions'][$clipIndex])) {
+                throw new Exception('Clip suggestion not found');
+            }
+            
+            $originalClip = $result['suggestions'][$clipIndex];
+            
+            // Save clip edit to database
+            $db = getDB();
+            $stmt = $db->prepare('
+                INSERT INTO ai_clip_edits 
+                (video_id, user_id, clip_index, original_start_time, original_end_time, edited_start_time, edited_end_time)
+                VALUES (:video_id, :user_id, :clip_index, :original_start, :original_end, :edited_start, :edited_end)
+                ON CONFLICT (video_id, user_id, clip_index) 
+                DO UPDATE SET 
+                    edited_start_time = :edited_start,
+                    edited_end_time = :edited_end,
+                    updated_at = CURRENT_TIMESTAMP
+            ');
+            
+            $stmt->execute([
+                'video_id' => $videoId,
+                'user_id' => $currentUser['id'],
+                'clip_index' => $clipIndex,
+                'original_start' => $originalClip['start_time'],
+                'original_end' => $originalClip['end_time'],
+                'edited_start' => (int)$startTime,
+                'edited_end' => (int)$endTime
+            ]);
+            
+            echo json_encode(['success' => true]);
             exit;
         }
         

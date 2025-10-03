@@ -11,7 +11,6 @@ define('SMTP2GO_API_KEY', getenv('SMTP2GO_API_KEY') ?: '');
 define('SMTP_FROM_EMAIL', getenv('SMTP_FROM_EMAIL') ?: 'noreply@vidcard.io');
 define('SMTP_FROM_NAME', getenv('SMTP_FROM_NAME') ?: 'VidCard');
 
-// YouTube API
 define('YOUTUBE_API_KEY', getenv('YOUTUBE_API_KEY') ?: '');
 
 // Caption/Transcript API
@@ -19,6 +18,10 @@ define('CAPTION_API_KEY', getenv('CAPTION_API_KEY') ?: '');
 
 // n8n Webhook
 define('N8N_WEBHOOK_URL', getenv('N8N_WEBHOOK_URL') ?: '');
+
+// Wredia Clip Download API
+define('WREDIA_CLIP_API_KEY', getenv('WREDIA_CLIP_API_KEY') ?: '');
+define('WREDIA_CLIP_API_URL', getenv('WREDIA_CLIP_API_URL') ?: 'https://vid.wredia.com/download/clip');
 
 // App Configuration
 define('APP_URL', getenv('APP_URL') ?: 'https://vidcard.io');
