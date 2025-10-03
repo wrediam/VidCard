@@ -480,7 +480,6 @@
                             <p class="text-sm text-slate-600 max-w-md mx-auto">AI will analyze your video transcript to identify the most engaging moments perfect for social media clips.</p>
                         </div>
                         <button 
-                            onclick="generateClipSuggestions()"
                             id="generateClipsBtn"
                             class="px-6 py-2.5 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg font-medium hover:from-orange-700 hover:to-red-700 transition shadow-lg hover:shadow-xl"
                         >
@@ -1552,9 +1551,74 @@
         let currentClipIndex = 0;
 
         // Clip Suggestions Modal Functions
-        function openClipSuggestionsModal() {
+        async function openClipSuggestionsModal() {
+            // Check for existing clip suggestions and update button
+            await checkExistingClipSuggestions();
+            
             document.getElementById('clipSuggestionsModal').classList.remove('hidden');
             document.getElementById('aiToolsModal').classList.add('hidden');
+        }
+
+        async function checkExistingClipSuggestions() {
+            if (!currentVideoId) return;
+
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        action: 'get_clip_suggestions',
+                        video_id: currentVideoId 
+                    })
+                });
+
+                const data = await response.json();
+                const btn = document.getElementById('generateClipsBtn');
+                
+                if (btn) {
+                    if (data.success && data.has_suggestions && data.suggestions) {
+                        btn.textContent = 'View Clip Suggestions';
+                        btn.setAttribute('data-has-suggestions', 'true');
+                        btn.onclick = () => loadAndShowClipSuggestions();
+                    } else {
+                        btn.textContent = 'Generate Clip Suggestions';
+                        btn.setAttribute('data-has-suggestions', 'false');
+                        btn.onclick = () => generateClipSuggestions();
+                    }
+                }
+            } catch (error) {
+                console.error('Check clip suggestions error:', error);
+            }
+        }
+
+        async function loadAndShowClipSuggestions() {
+            if (!currentVideoId) return;
+
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        action: 'get_clip_suggestions',
+                        video_id: currentVideoId 
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.has_suggestions && data.suggestions) {
+                    // Hide initial view and show suggestions
+                    const initialView = document.querySelector('#clipSuggestionsContent > .text-center');
+                    const clipContainer = document.getElementById('clipSuggestionsContainer');
+                    
+                    if (initialView) initialView.classList.add('hidden');
+                    if (clipContainer) clipContainer.classList.remove('hidden');
+                    
+                    renderClipSuggestions(data.suggestions);
+                }
+            } catch (error) {
+                console.error('Load clip suggestions error:', error);
+            }
         }
 
         function closeClipSuggestionsModal() {
