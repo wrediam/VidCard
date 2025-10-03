@@ -1319,7 +1319,7 @@
 
         async function openAITools() {
             if (!currentTranscript) {
-                alert('Please load the transcript first');
+                showToast('Please load the transcript first', 'warning');
                 return;
             }
             
@@ -1390,7 +1390,7 @@
 
         async function generatePostSuggestions() {
             if (!currentVideoId) {
-                alert('Video ID not found');
+                showToast('Video ID not found', 'error');
                 return;
             }
 
@@ -1438,11 +1438,11 @@
                     // Render suggestions
                     renderPostSuggestions(data.suggestions);
                 } else {
-                    alert('Error: ' + (data.error || 'Failed to generate post suggestions'));
+                    showToast('Error: ' + (data.error || 'Failed to generate post suggestions'), 'error');
                 }
             } catch (error) {
                 console.error('Generate error:', error);
-                alert('Network error. Please try again.');
+                showToast('Network error. Please try again.', 'error');
             } finally {
                 // Re-enable buttons
                 if (btn) {
@@ -1876,12 +1876,13 @@
                     closeDeleteModal();
                     loadVideos(); // Reload the video list
                     closeChannelPanel(); // Close channel panel if open
+                    showToast('Video deleted successfully', 'success');
                 } else {
-                    alert('Error: ' + (data.error || 'Failed to delete video'));
+                    showToast('Error: ' + (data.error || 'Failed to delete video'), 'error');
                 }
             } catch (error) {
                 console.error('Delete error:', error);
-                alert('Network error. Please try again.');
+                showToast('Network error. Please try again.', 'error');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = 'Delete Video';
