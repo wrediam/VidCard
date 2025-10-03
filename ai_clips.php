@@ -105,6 +105,7 @@ class AIClips {
                     }
                     
                     error_log("Processing clip #$index: " . substr($quotation, 0, 80) . "...");
+                    error_log("Clip #$index: Full AI quote: " . $quotation);
                     
                     // STEP 1: Verify and correct the AI's quotation against the actual transcript
                     $verifiedQuotation = $this->verifyAndCorrectQuotation($quotation, $transcriptText, $index);
@@ -118,6 +119,9 @@ class AIClips {
                     $timestamps = $this->locateQuotationInTranscript($verifiedQuotation['corrected_text'], $rawData, $index);
                     
                     if ($timestamps) {
+                        $startSec = round($timestamps['start_time_ms'] / 1000);
+                        $endSec = round($timestamps['end_time_ms'] / 1000);
+                        
                         $processedSuggestions[] = [
                             'quotation' => $verifiedQuotation['corrected_text'], // Use corrected version
                             'ai_original_quote' => $quotation, // Keep original for reference
@@ -129,7 +133,10 @@ class AIClips {
                             'reason' => $suggestion['reason'] ?? 'AI-selected clip',
                             'match_confidence' => $timestamps['match_confidence'] ?? 1.0
                         ];
-                        error_log("Successfully located clip #$index: {$timestamps['start_time_ms']}ms - {$timestamps['end_time_ms']}ms (confidence: " . round($timestamps['match_confidence'] * 100) . "%, corrected: " . ($verifiedQuotation['was_corrected'] ? 'yes' : 'no') . ")");
+                        error_log("✅ SUCCESS Clip #$index: {$timestamps['start_time_ms']}ms ({$startSec}s) - {$timestamps['end_time_ms']}ms ({$endSec}s)");
+                        error_log("Clip #$index: Match confidence: " . round($timestamps['match_confidence'] * 100) . "%, Corrected: " . ($verifiedQuotation['was_corrected'] ? 'yes' : 'no'));
+                        error_log("Clip #$index: Title: " . ($suggestion['suggested_title'] ?? 'Untitled'));
+                        error_log("Clip #$index: Corrected text used: " . substr($verifiedQuotation['corrected_text'], 0, 150) . "...");
                     } else {
                         error_log("Could not locate quotation #$index in transcript. Quotation: " . substr($verifiedQuotation['corrected_text'], 0, 200));
                     }
@@ -322,7 +329,7 @@ class AIClips {
         $normalizedAI = $this->normalizeText($aiQuotation);
         $normalizedTranscript = $this->normalizeText($transcriptText);
         
-        // Extract key phrases from AI quotation (first 5-10 words and last 5-10 words)
+        // Extract key phrases from AI quotation
         $aiWords = preg_split('/\s+/', $normalizedAI);
         $aiWords = array_filter($aiWords);
         
@@ -331,15 +338,15 @@ class AIClips {
             return null;
         }
         
-        // Create search patterns using beginning and end of quote
-        $startWords = array_slice($aiWords, 0, min(8, count($aiWords)));
-        $endWords = array_slice($aiWords, -min(8, count($aiWords)));
+        // Use more distinctive words from the middle of the quote for better matching
+        // First 10 words, middle 10 words, and last 10 words
+        $wordCount = count($aiWords);
+        $startWords = array_slice($aiWords, 0, min(10, $wordCount));
+        $middleStart = max(0, (int)floor($wordCount / 2) - 5);
+        $middleWords = array_slice($aiWords, $middleStart, min(10, $wordCount - $middleStart));
+        $endWords = array_slice($aiWords, -min(10, $wordCount));
         
-        $startPattern = implode('\\s+', array_map('preg_quote', $startWords));
-        $endPattern = implode('\\s+', array_map('preg_quote', $endWords));
-        
-        // Try to find the approximate location in transcript
-        // Look for start pattern with some flexibility
+        // Try to find start position using beginning words
         $startPos = $this->findFlexibleMatch($startWords, $normalizedTranscript);
         
         if ($startPos === false) {
@@ -347,31 +354,47 @@ class AIClips {
             return null;
         }
         
-        // Look for end pattern after start position
-        $endPos = $this->findFlexibleMatch($endWords, $normalizedTranscript, $startPos);
+        // Verify the match by checking if middle words appear after start
+        $middleSearchStart = $startPos + (strlen($normalizedAI) * 0.3); // Look 30% into expected quote
+        $middlePos = $this->findFlexibleMatch($middleWords, $normalizedTranscript, (int)$middleSearchStart);
+        
+        if ($middlePos === false || $middlePos > $startPos + strlen($normalizedAI) * 2) {
+            error_log("Clip #$clipIndex: Middle words not found in expected range, likely wrong match");
+            return null;
+        }
+        
+        // Look for end pattern after middle position
+        $endSearchStart = max($middlePos, $startPos + (strlen($normalizedAI) * 0.5));
+        $endPos = $this->findFlexibleMatch($endWords, $normalizedTranscript, (int)$endSearchStart);
         
         if ($endPos === false) {
-            // If we can't find end, estimate based on AI quote length
-            $estimatedLength = strlen($normalizedAI) * 1.3; // Allow 30% variance
+            // Estimate end based on AI quote length
+            $estimatedLength = strlen($normalizedAI) * 1.2; // Allow 20% variance
             $endPos = min($startPos + $estimatedLength, strlen($normalizedTranscript));
             error_log("Clip #$clipIndex: Could not find exact end, using estimated position");
+        } else {
+            // Add length of end words to get actual end position
+            $endWordsLength = strlen(implode(' ', $endWords));
+            $endPos += $endWordsLength;
         }
         
         // Extract the actual text from transcript
-        $extractedText = substr($normalizedTranscript, $startPos, $endPos - $startPos);
+        $extractedLength = $endPos - $startPos;
+        $extractedText = substr($normalizedTranscript, $startPos, $extractedLength);
         
         // Get the original (non-normalized) text from the transcript
-        // We need to map back to the original text with proper capitalization/punctuation
-        $correctedText = $this->extractOriginalText($transcriptText, $startPos, $endPos - $startPos);
+        $correctedText = $this->extractOriginalText($transcriptText, $startPos, $extractedLength);
         
         // Calculate similarity score
         similar_text($normalizedAI, $extractedText, $similarityPercent);
         
-        $wasCorrected = ($similarityPercent < 98); // Consider it corrected if less than 98% similar
+        $wasCorrected = ($similarityPercent < 98);
         
         error_log("Clip #$clipIndex: Similarity: " . round($similarityPercent, 2) . "%, Corrected: " . ($wasCorrected ? 'yes' : 'no'));
+        error_log("Clip #$clipIndex: AI quote (first 100 chars): " . substr($aiQuotation, 0, 100) . "...");
+        error_log("Clip #$clipIndex: Extracted from DB (first 100 chars): " . substr($correctedText, 0, 100) . "...");
         
-        if ($similarityPercent < 50) {
+        if ($similarityPercent < 60) {
             error_log("Clip #$clipIndex: Similarity too low (" . round($similarityPercent, 2) . "%), rejecting match");
             return null;
         }
@@ -554,16 +577,26 @@ class AIClips {
                 if ($confidence > $bestConfidence) {
                     error_log("Clip #$clipIndex: Found match at segment $i - confidence: " . round($confidence * 100) . "%, duration: {$durationSec}s, matched {$matchedWords}/" . count($quotationWords) . " words");
                     
+                    // Extract matched text from segments for logging
+                    $matchedTextParts = [];
+                    for ($k = $firstMatchSegmentIndex; $k <= $j && $k < count($textSegments); $k++) {
+                        $matchedTextParts[] = $textSegments[$k]['text'];
+                        if (count($matchedTextParts) >= 20) break; // Limit to first 20 segments
+                    }
+                    $matchedTextPreview = implode('', $matchedTextParts);
+                    error_log("Clip #$clipIndex: Matched text from raw: " . substr($matchedTextPreview, 0, 150) . "...");
+                    
                     $bestMatch = [
                         'start_time_ms' => $startMs,
                         'end_time_ms' => $endMs,
-                        'match_confidence' => $confidence
+                        'match_confidence' => $confidence,
+                        'matched_text_preview' => substr($matchedTextPreview, 0, 200)
                     ];
                     $bestConfidence = $confidence;
                     
                     // If we have a perfect or near-perfect match with reasonable duration, use it
                     if ($confidence >= 0.95) {
-                        error_log("Clip #$clipIndex: Found excellent match at segment $i with confidence " . round($confidence * 100) . "% and duration {$durationSec}s");
+                        error_log("Clip #$clipIndex: ✅ Found excellent match at segment $i with confidence " . round($confidence * 100) . "% and duration {$durationSec}s");
                         return $bestMatch;
                     }
                 }
@@ -575,7 +608,8 @@ class AIClips {
             $durationSec = round($durationMs / 1000);
             $startSec = round($bestMatch['start_time_ms'] / 1000);
             $endSec = round($bestMatch['end_time_ms'] / 1000);
-            error_log("Clip #$clipIndex: Found best match with confidence " . round($bestConfidence * 100) . "% - Start: {$bestMatch['start_time_ms']}ms ({$startSec}s), End: {$bestMatch['end_time_ms']}ms ({$endSec}s), Duration: {$durationMs}ms ({$durationSec}s)");
+            error_log("Clip #$clipIndex: ✅ Found best match with confidence " . round($bestConfidence * 100) . "% - Start: {$bestMatch['start_time_ms']}ms ({$startSec}s), End: {$bestMatch['end_time_ms']}ms ({$endSec}s), Duration: {$durationMs}ms ({$durationSec}s)");
+            error_log("Clip #$clipIndex: Best match text from raw: " . ($bestMatch['matched_text_preview'] ?? 'N/A'));
             return $bestMatch;
         }
         
