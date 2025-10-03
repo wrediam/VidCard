@@ -418,7 +418,7 @@ class AIClips {
     /**
      * Locate a text quotation in the timestamped transcript data
      * Returns start and end timestamps in milliseconds
-     * Uses simple event-based search (concatenate all text in event, search for phrase)
+     * Uses sequential word-by-word matching across segments
      */
     private function locateQuotationInTranscript($quotation, $rawData, $clipIndex = 0, $positionHint = null) {
         if (!isset($rawData['events']) || !is_array($rawData['events'])) {
@@ -426,41 +426,18 @@ class AIClips {
             return null;
         }
         
-        // Normalize the quotation for matching
-        $normalizedQuotation = $this->normalizeText($quotation);
+        // Extract words from quotation (normalize: lowercase, remove punctuation)
+        $searchWords = $this->extractWords($quotation);
         
-        if (empty($normalizedQuotation)) {
-            error_log("Clip #$clipIndex: Quotation normalized to empty");
+        if (empty($searchWords)) {
+            error_log("Clip #$clipIndex: No words extracted from quotation");
             return null;
         }
         
-        error_log("Clip #$clipIndex: Searching for: " . substr($normalizedQuotation, 0, 100) . "...");
+        error_log("Clip #$clipIndex: Searching for " . count($searchWords) . " words: " . implode(' ', array_slice($searchWords, 0, 10)) . "...");
         
-        // Calculate approximate timestamp range if we have position hint
-        $searchStartMs = 0;
-        $searchEndMs = PHP_INT_MAX;
-        
-        if ($positionHint && isset($positionHint['start_pos'], $positionHint['transcript_length'])) {
-            $totalEvents = count($rawData['events']);
-            if ($totalEvents > 0) {
-                $lastEvent = $rawData['events'][$totalEvents - 1];
-                $totalVideoMs = ($lastEvent['tStartMs'] ?? 0) + ($lastEvent['dDurationMs'] ?? 0);
-                
-                $textRatio = $positionHint['start_pos'] / max(1, $positionHint['transcript_length']);
-                $estimatedStartMs = (int)($totalVideoMs * $textRatio);
-                
-                $windowSize = (int)($totalVideoMs * 0.3); // 30% window
-                $searchStartMs = max(0, $estimatedStartMs - $windowSize);
-                $searchEndMs = min($totalVideoMs, $estimatedStartMs + $windowSize);
-                
-                error_log("Clip #$clipIndex: Searching " . round($searchStartMs/1000) . "s to " . round($searchEndMs/1000) . "s");
-            }
-        }
-        
-        // Search through events
-        $bestMatch = null;
-        $bestMatchLength = 0;
-        
+        // Build flat list of all segments with timestamps
+        $segments = [];
         foreach ($rawData['events'] as $event) {
             if (!isset($event['segs']) || !is_array($event['segs'])) {
                 continue;
@@ -468,56 +445,129 @@ class AIClips {
             
             $eventStartMs = $event['tStartMs'] ?? 0;
             $eventDurationMs = $event['dDurationMs'] ?? 0;
-            $eventEndMs = $eventStartMs + $eventDurationMs;
             
-            // Skip events outside search window
-            if ($eventEndMs < $searchStartMs || $eventStartMs > $searchEndMs) {
+            foreach ($event['segs'] as $seg) {
+                if (!isset($seg['utf8'])) {
+                    continue;
+                }
+                
+                $text = $seg['utf8'];
+                $words = $this->extractWords($text);
+                
+                // Skip segments with no words (newlines, punctuation only, etc.)
+                if (empty($words)) {
+                    continue;
+                }
+                
+                // Calculate actual timestamp for this segment
+                // First segment in event has no tOffsetMs (starts at tStartMs)
+                // Subsequent segments have tOffsetMs (offset from tStartMs)
+                $segmentOffsetMs = $seg['tOffsetMs'] ?? 0;
+                $actualTimestampMs = $eventStartMs + $segmentOffsetMs;
+                
+                // Each segment can have multiple words, but they all share the same timestamp
+                foreach ($words as $word) {
+                    $segments[] = [
+                        'word' => $word,
+                        'original_text' => $text,
+                        'timestamp_ms' => $actualTimestampMs,
+                        'event_start_ms' => $eventStartMs,
+                        'event_end_ms' => $eventStartMs + $eventDurationMs
+                    ];
+                }
+            }
+        }
+        
+        error_log("Clip #$clipIndex: Built " . count($segments) . " word segments");
+        
+        // Sequential search: find first word, then check if subsequent words match
+        $firstWord = $searchWords[0];
+        $totalWords = count($searchWords);
+        
+        for ($i = 0; $i < count($segments); $i++) {
+            // Check if this segment matches the first word
+            if ($segments[$i]['word'] !== $firstWord) {
                 continue;
             }
             
-            // Concatenate all text in this event
-            $eventText = "";
-            foreach ($event['segs'] as $seg) {
-                if (isset($seg['utf8'])) {
-                    $eventText .= $seg['utf8'];
+            // Found first word! Now check if subsequent words match
+            $matchedWords = 1;
+            $startTimestamp = $segments[$i]['timestamp_ms'];
+            $endTimestamp = $segments[$i]['timestamp_ms'];
+            $matchedText = $segments[$i]['original_text'];
+            
+            // Check each subsequent word
+            for ($j = 1; $j < $totalWords; $j++) {
+                $nextSegmentIndex = $i + $j;
+                
+                // Check if we have enough segments left
+                if ($nextSegmentIndex >= count($segments)) {
+                    break;
+                }
+                
+                $expectedWord = $searchWords[$j];
+                $actualWord = $segments[$nextSegmentIndex]['word'];
+                
+                if ($expectedWord === $actualWord) {
+                    $matchedWords++;
+                    $endTimestamp = $segments[$nextSegmentIndex]['timestamp_ms'];
+                    $matchedText .= ' ' . $segments[$nextSegmentIndex]['original_text'];
+                } else {
+                    // Word doesn't match, break and try next occurrence of first word
+                    break;
                 }
             }
             
-            // Normalize and search
-            $normalizedEventText = $this->normalizeText($eventText);
-            
-            // Check if quotation is in this event
-            if (strpos($normalizedEventText, $normalizedQuotation) !== false) {
-                error_log("Clip #$clipIndex: ✅ Found exact match in event at " . round($eventStartMs/1000) . "s");
+            // Check if we matched all words
+            if ($matchedWords === $totalWords) {
+                $confidence = 1.0;
+                error_log("Clip #$clipIndex: ✅ Found complete match! Matched all {$matchedWords} words from " . round($startTimestamp/1000) . "s to " . round($endTimestamp/1000) . "s");
+                
                 return [
-                    'start_time_ms' => $eventStartMs,
-                    'end_time_ms' => $eventEndMs,
-                    'matched_text' => trim($eventText),
-                    'confidence' => 1.0
+                    'start_time_ms' => $startTimestamp,
+                    'end_time_ms' => $endTimestamp,
+                    'matched_text' => trim($matchedText),
+                    'confidence' => $confidence
                 ];
             }
             
-            // If no exact match, check for partial match (for finding best candidate)
-            $matchLength = similar_text($normalizedQuotation, $normalizedEventText);
-            if ($matchLength > $bestMatchLength) {
-                $bestMatchLength = $matchLength;
-                $bestMatch = [
-                    'start_time_ms' => $eventStartMs,
-                    'end_time_ms' => $eventEndMs,
-                    'matched_text' => trim($eventText),
-                    'confidence' => $matchLength / strlen($normalizedQuotation)
+            // If we matched most words (>80%), consider it a good partial match
+            if ($matchedWords / $totalWords > 0.8) {
+                error_log("Clip #$clipIndex: Found partial match: {$matchedWords}/{$totalWords} words from " . round($startTimestamp/1000) . "s");
+                
+                return [
+                    'start_time_ms' => $startTimestamp,
+                    'end_time_ms' => $endTimestamp,
+                    'matched_text' => trim($matchedText),
+                    'confidence' => $matchedWords / $totalWords
                 ];
             }
         }
         
-        // If we found a good partial match (>70% similar), use it
-        if ($bestMatch && $bestMatch['confidence'] > 0.7) {
-            error_log("Clip #$clipIndex: Found partial match with " . round($bestMatch['confidence'] * 100) . "% confidence at " . round($bestMatch['start_time_ms']/1000) . "s");
-            return $bestMatch;
-        }
-        
-        error_log("Clip #$clipIndex: No match found");
+        error_log("Clip #$clipIndex: No match found for phrase");
         return null;
+    }
+    
+    /**
+     * Extract words from text, ignoring punctuation, capitalization, and special chars
+     */
+    private function extractWords($text) {
+        // Convert to lowercase
+        $text = strtolower($text);
+        
+        // Remove all punctuation and special characters, keep only letters, numbers, and spaces
+        $text = preg_replace('/[^\w\s]/', ' ', $text);
+        
+        // Replace multiple spaces with single space
+        $text = preg_replace('/\s+/', ' ', $text);
+        
+        // Split into words and filter empty
+        $words = explode(' ', trim($text));
+        $words = array_filter($words, function($word) {
+            return !empty($word);
+        });
+        
+        return array_values($words); // Re-index array
     }
     
     /**
