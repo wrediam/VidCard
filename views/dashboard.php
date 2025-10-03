@@ -211,13 +211,32 @@
     <!-- Transcript Modal -->
     <div id="transcriptModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center overflow-y-auto p-4">
         <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8">
-            <div class="sticky top-0 bg-white border-b border-slate-200 p-6 flex items-center justify-between rounded-t-lg z-10">
-                <h3 class="text-2xl font-bold text-slate-900">📝 Video Transcript</h3>
-                <button onclick="closeTranscriptModal()" class="text-slate-400 hover:text-slate-600">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
+            <div class="sticky top-0 bg-white border-b border-slate-200 p-6 rounded-t-lg z-10">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-2xl font-bold text-slate-900">📝 Video Transcript</h3>
+                    <button onclick="closeTranscriptModal()" class="text-slate-400 hover:text-slate-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <!-- View Toggle -->
+                <div id="transcriptViewToggle" class="hidden flex gap-2 bg-slate-100 p-1 rounded-lg w-fit">
+                    <button 
+                        onclick="switchTranscriptView('plain')"
+                        id="plainViewBtn"
+                        class="px-4 py-2 rounded-md font-medium text-sm transition bg-white text-slate-900 shadow-sm"
+                    >
+                        Plain Text
+                    </button>
+                    <button 
+                        onclick="switchTranscriptView('timestamped')"
+                        id="timestampedViewBtn"
+                        class="px-4 py-2 rounded-md font-medium text-sm transition text-slate-600 hover:text-slate-900"
+                    >
+                        Timestamped
+                    </button>
+                </div>
             </div>
             <div class="p-6 max-h-[70vh] overflow-y-auto">
                 <div id="transcriptContent" class="prose max-w-none">
@@ -1032,14 +1051,20 @@
 
         // Transcript functionality
         let currentTranscript = '';
+        let currentTranscriptTimestamped = '';
+        let currentTranscriptView = 'plain';
         let currentVideoId = '';
 
         async function viewTranscript(videoId, hasTranscript) {
             currentVideoId = videoId;
+            currentTranscriptView = 'plain'; // Reset to plain view
             document.getElementById('transcriptModal').classList.remove('hidden');
             document.body.style.overflow = 'hidden';
             
             const content = document.getElementById('transcriptContent');
+            const toggle = document.getElementById('transcriptViewToggle');
+            toggle.classList.add('hidden'); // Hide toggle until loaded
+            
             content.innerHTML = `
                 <div class="flex items-center justify-center py-8">
                     <svg class="animate-spin h-8 w-8 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -1072,12 +1097,17 @@
 
                 if (data.success && data.transcript) {
                     currentTranscript = data.transcript;
-                    content.innerHTML = `
-                        <div class="whitespace-pre-wrap text-slate-700 leading-relaxed">
-                            ${escapeHtml(data.transcript)}
-                        </div>
-                        ${data.fetched_at ? `<p class="text-xs text-slate-500 mt-4">Fetched: ${new Date(data.fetched_at).toLocaleString()}</p>` : ''}
-                    `;
+                    currentTranscriptTimestamped = data.transcript_timestamped || '';
+                    
+                    // Show toggle if we have both versions
+                    if (currentTranscriptTimestamped) {
+                        toggle.classList.remove('hidden');
+                        // Reset toggle buttons
+                        updateToggleButtons('plain');
+                    }
+                    
+                    // Display plain text by default
+                    displayTranscript('plain', data.fetched_at);
                     
                     if (!hasTranscript) {
                         loadVideos();
@@ -1093,6 +1123,7 @@
                         </div>
                     `;
                     currentTranscript = '';
+                    currentTranscriptTimestamped = '';
                 }
             } catch (error) {
                 console.error('Transcript error:', error);
@@ -1103,19 +1134,59 @@
                     </div>
                 `;
                 currentTranscript = '';
+                currentTranscriptTimestamped = '';
             }
+        }
+
+        function switchTranscriptView(view) {
+            currentTranscriptView = view;
+            updateToggleButtons(view);
+            displayTranscript(view);
+        }
+
+        function updateToggleButtons(activeView) {
+            const plainBtn = document.getElementById('plainViewBtn');
+            const timestampedBtn = document.getElementById('timestampedViewBtn');
+            
+            if (activeView === 'plain') {
+                plainBtn.classList.add('bg-white', 'text-slate-900', 'shadow-sm');
+                plainBtn.classList.remove('text-slate-600', 'hover:text-slate-900');
+                timestampedBtn.classList.remove('bg-white', 'text-slate-900', 'shadow-sm');
+                timestampedBtn.classList.add('text-slate-600', 'hover:text-slate-900');
+            } else {
+                timestampedBtn.classList.add('bg-white', 'text-slate-900', 'shadow-sm');
+                timestampedBtn.classList.remove('text-slate-600', 'hover:text-slate-900');
+                plainBtn.classList.remove('bg-white', 'text-slate-900', 'shadow-sm');
+                plainBtn.classList.add('text-slate-600', 'hover:text-slate-900');
+            }
+        }
+
+        function displayTranscript(view, fetchedAt) {
+            const content = document.getElementById('transcriptContent');
+            const text = view === 'plain' ? currentTranscript : currentTranscriptTimestamped;
+            
+            content.innerHTML = `
+                <div class="whitespace-pre-wrap text-slate-700 leading-relaxed ${view === 'timestamped' ? 'font-mono text-sm' : ''}">
+                    ${escapeHtml(text)}
+                </div>
+                ${fetchedAt ? `<p class="text-xs text-slate-500 mt-4">Fetched: ${new Date(fetchedAt).toLocaleString()}</p>` : ''}
+            `;
         }
 
         function closeTranscriptModal() {
             document.getElementById('transcriptModal').classList.add('hidden');
             document.body.style.overflow = 'auto';
             currentTranscript = '';
+            currentTranscriptTimestamped = '';
+            currentTranscriptView = 'plain';
+            document.getElementById('transcriptViewToggle').classList.add('hidden');
         }
 
         function copyTranscript() {
-            if (!currentTranscript) return;
+            const textToCopy = currentTranscriptView === 'plain' ? currentTranscript : currentTranscriptTimestamped;
+            if (!textToCopy) return;
             
-            navigator.clipboard.writeText(currentTranscript).then(() => {
+            navigator.clipboard.writeText(textToCopy).then(() => {
                 const btn = document.getElementById('copyTranscriptBtn');
                 const originalText = btn.textContent;
                 btn.textContent = 'Copied!';

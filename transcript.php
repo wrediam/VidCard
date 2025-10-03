@@ -102,6 +102,45 @@ class Transcript {
     }
     
     /**
+     * Extract timestamped text from raw caption data
+     */
+    public function extractTimestampedText($captionData) {
+        if (!$captionData || !isset($captionData['events'])) {
+            return '';
+        }
+        
+        $lines = [];
+        
+        foreach ($captionData['events'] as $event) {
+            if (!isset($event['segs']) || !isset($event['tStartMs'])) {
+                continue;
+            }
+            
+            // Convert milliseconds to readable timestamp (MM:SS)
+            $totalSeconds = floor($event['tStartMs'] / 1000);
+            $minutes = floor($totalSeconds / 60);
+            $seconds = $totalSeconds % 60;
+            $timestamp = sprintf('[%02d:%02d]', $minutes, $seconds);
+            
+            // Collect text from segments
+            $lineText = '';
+            foreach ($event['segs'] as $segment) {
+                if (isset($segment['utf8']) && $segment['utf8'] !== "\n") {
+                    $lineText .= $segment['utf8'];
+                }
+            }
+            
+            // Add line with timestamp if there's text
+            $lineText = trim($lineText);
+            if (!empty($lineText)) {
+                $lines[] = $timestamp . ' ' . $lineText;
+            }
+        }
+        
+        return implode("\n", $lines);
+    }
+    
+    /**
      * Save transcript to database
      */
     public function saveTranscript($videoId, $captionData, $cleanText) {

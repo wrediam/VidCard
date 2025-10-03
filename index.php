@@ -559,10 +559,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $transcriptService = new Transcript();
             $transcript = $transcriptService->getTranscript($videoId);
             
+            // Extract timestamped text from raw data if available
+            $timestampedText = null;
+            if (!empty($transcript['transcript_raw'])) {
+                $rawData = json_decode($transcript['transcript_raw'], true);
+                if ($rawData) {
+                    $timestampedText = $transcriptService->extractTimestampedText($rawData);
+                }
+            }
+            
             echo json_encode([
                 'success' => true,
                 'has_transcript' => !empty($transcript['transcript_text']),
                 'transcript' => $transcript['transcript_text'] ?? null,
+                'transcript_timestamped' => $timestampedText,
                 'fetched_at' => $transcript['transcript_fetched_at'] ?? null,
                 'unavailable' => $transcript['transcript_unavailable'] ?? false
             ]);
@@ -606,9 +616,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $transcript = $transcriptService->getTranscript($videoId);
             
+            // Extract timestamped text from raw data if available
+            $timestampedText = null;
+            if (!empty($transcript['transcript_raw'])) {
+                $rawData = json_decode($transcript['transcript_raw'], true);
+                if ($rawData) {
+                    $timestampedText = $transcriptService->extractTimestampedText($rawData);
+                }
+            }
+            
             echo json_encode([
                 'success' => true,
                 'transcript' => $transcript['transcript_text'] ?? null,
+                'transcript_timestamped' => $timestampedText,
                 'fetched_at' => $transcript['transcript_fetched_at'] ?? null,
                 'unavailable' => false
             ]);
