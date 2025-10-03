@@ -279,7 +279,8 @@ class AIClips {
                 $textSegments[] = [
                     'text' => $text,
                     'normalized' => $this->normalizeText($text),
-                    'start_ms' => $absoluteStartMs,
+                    'segment_start_ms' => $absoluteStartMs,
+                    'event_start_ms' => $eventStartMs,
                     'event_end_ms' => $eventStartMs + $eventDurationMs
                 ];
             }
@@ -342,8 +343,10 @@ class AIClips {
                     // Check if current quotation word matches (exact or partial)
                     if ($this->wordsMatch($quotationWords[$quotationIndex], $segmentWord)) {
                         if ($startMs === null) {
-                            $startMs = $textSegments[$j]['start_ms'];
+                            // Use the event's tStartMs for the clip start
+                            $startMs = $textSegments[$j]['event_start_ms'];
                         }
+                        // Keep updating end time as we match more words
                         $endMs = $textSegments[$j]['event_end_ms'];
                         $matchedWords++;
                         $quotationIndex++;
@@ -382,7 +385,7 @@ class AIClips {
         }
         
         if ($bestMatch) {
-            error_log("Clip #$clipIndex: Found best match with confidence " . round($bestConfidence * 100) . "%");
+            error_log("Clip #$clipIndex: Found best match with confidence " . round($bestConfidence * 100) . "% - Start: {$bestMatch['start_time_ms']}ms, End: {$bestMatch['end_time_ms']}ms, Duration: " . ($bestMatch['end_time_ms'] - $bestMatch['start_time_ms']) . "ms");
             return $bestMatch;
         }
         
