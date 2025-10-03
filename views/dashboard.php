@@ -1398,22 +1398,31 @@
             const regenerateBtn = document.getElementById('regeneratePostsBtn');
             const aiToolsSelection = document.getElementById('aiToolsSelection');
             const suggestionsContainer = document.getElementById('postSuggestionsContainer');
+            const isRegenerating = regenerateBtn && !regenerateBtn.disabled && suggestionsContainer && !suggestionsContainer.classList.contains('hidden');
             
-            // Disable buttons and show loading state
-            if (btn) {
+            // Loading HTML
+            const loadingHTML = `
+                <div class="flex items-center gap-2">
+                    <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Analyzing video...</span>
+                </div>
+            `;
+            
+            // Disable and show loading on appropriate button
+            if (isRegenerating && regenerateBtn) {
+                regenerateBtn.disabled = true;
+                regenerateBtn.innerHTML = loadingHTML;
+            } else if (btn) {
                 btn.disabled = true;
                 btn.innerHTML = `
-                    <div class="flex items-center justify-center gap-2">
-                        <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <span>Generating...</span>
+                    <div class="flex flex-col items-center justify-center gap-2">
+                        ${loadingHTML}
+                        <span class="text-xs opacity-75">This may take up to 2 minutes</span>
                     </div>
                 `;
-            }
-            if (regenerateBtn) {
-                regenerateBtn.disabled = true;
             }
 
             try {
@@ -1444,13 +1453,19 @@
                 console.error('Generate error:', error);
                 showToast('Network error. Please try again.', 'error');
             } finally {
-                // Re-enable buttons
+                // Re-enable buttons and restore text
                 if (btn) {
                     btn.disabled = false;
-                    btn.textContent = 'Generate Posts';
+                    btn.textContent = 'Generate Post Suggestions';
                 }
                 if (regenerateBtn) {
                     regenerateBtn.disabled = false;
+                    regenerateBtn.innerHTML = `
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        Regenerate
+                    `;
                 }
             }
         }
