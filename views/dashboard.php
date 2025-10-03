@@ -1191,11 +1191,14 @@
             // Set the current video ID
             currentVideoId = videoId;
             
+            // Reset to selection view
+            const aiToolsSelection = document.getElementById('aiToolsSelection');
+            const postContainer = document.getElementById('postSuggestionsContainer');
+            if (aiToolsSelection) aiToolsSelection.classList.remove('hidden');
+            if (postContainer) postContainer.classList.add('hidden');
+            
             // Open AI Tools modal directly
             document.getElementById('aiToolsModal').classList.remove('hidden');
-            
-            // Try to load existing suggestions
-            await loadExistingPostSuggestions();
         }
 
         async function openAITools() {
@@ -1204,12 +1207,15 @@
                 return;
             }
             
+            // Reset to selection view
+            const aiToolsSelection = document.getElementById('aiToolsSelection');
+            const postContainer = document.getElementById('postSuggestionsContainer');
+            if (aiToolsSelection) aiToolsSelection.classList.remove('hidden');
+            if (postContainer) postContainer.classList.add('hidden');
+            
             // Hide transcript modal and show AI tools modal
             document.getElementById('transcriptModal').classList.add('hidden');
             document.getElementById('aiToolsModal').classList.remove('hidden');
-            
-            // Try to load existing suggestions
-            await loadExistingPostSuggestions();
         }
 
         async function loadExistingPostSuggestions() {
