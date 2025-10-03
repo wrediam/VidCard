@@ -1144,13 +1144,16 @@
             // Reset to selection view
             const aiToolsSelection = document.getElementById('aiToolsSelection');
             const postContainer = document.getElementById('postSuggestionsContainer');
+            const clipContainer = document.getElementById('clipSuggestionsContainer');
             const backBtn = document.getElementById('aiToolsBackBtn');
             if (aiToolsSelection) aiToolsSelection.classList.remove('hidden');
             if (postContainer) postContainer.classList.add('hidden');
+            if (clipContainer) clipContainer.classList.add('hidden');
             if (backBtn) backBtn.classList.add('hidden');
             
-            // Check for existing post suggestions and update button
+            // Check for existing suggestions and update buttons
             await checkExistingPostSuggestions();
+            await checkExistingClipSuggestions();
             
             // Open AI Tools modal directly
             document.getElementById('aiToolsModal').classList.remove('hidden');
