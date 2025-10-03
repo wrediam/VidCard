@@ -116,10 +116,17 @@ try {
     // Prepare request to Wredia API
     $youtubeUrl = "https://www.youtube.com/watch?v={$videoId}";
     
+    // Ensure times are integers and calculate duration
+    $startTimeInt = (int)round($startTime);
+    $endTimeInt = (int)round($endTime);
+    $duration = $endTimeInt - $startTimeInt;
+    
+    error_log("Clip request: video={$videoId}, start={$startTimeInt}s, end={$endTimeInt}s, duration={$duration}s");
+    
     $requestData = [
         'url' => $youtubeUrl,
-        'start_time' => (int)$startTime,
-        'end_time' => (int)$endTime,
+        'start_time' => $startTimeInt,
+        'end_time' => $endTimeInt,
         'resolution' => $input['resolution'] ?? '1080p',
         'link' => true // Return download link instead of file
     ];
@@ -181,6 +188,11 @@ try {
         http_response_code(500);
         echo json_encode(['success' => false, 'error' => 'Invalid response from clip download service']);
         exit;
+    }
+    
+    // Check what duration the API actually created
+    if (isset($apiResponse['video_info']['clip_duration'])) {
+        error_log("Wredia API created clip with duration: " . $apiResponse['video_info']['clip_duration']);
     }
     
     // Try multiple possible response formats from the API
