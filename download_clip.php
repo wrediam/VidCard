@@ -173,6 +173,9 @@ try {
     
     $apiResponse = json_decode($response, true);
     
+    // Log the full API response for debugging
+    error_log("Wredia API response: " . substr($response, 0, 1000));
+    
     if (!$apiResponse) {
         error_log("Wredia API invalid response: " . substr($response, 0, 500));
         http_response_code(500);
@@ -180,10 +183,28 @@ try {
         exit;
     }
     
+    // Try multiple possible response formats from the API
+    $downloadUrl = $apiResponse['download_url'] 
+                ?? $apiResponse['download_link'] 
+                ?? $apiResponse['url'] 
+                ?? $apiResponse['file'] 
+                ?? null;
+    
+    if (!$downloadUrl) {
+        error_log("Wredia API - no download URL found in response: " . json_encode($apiResponse));
+        http_response_code(500);
+        echo json_encode([
+            'success' => false, 
+            'error' => 'No download URL returned from clip service',
+            'api_response' => $apiResponse
+        ]);
+        exit;
+    }
+    
     // Return the download link to the frontend
     echo json_encode([
         'success' => true,
-        'download_url' => $apiResponse['download_url'] ?? $apiResponse['url'] ?? null,
+        'download_url' => $downloadUrl,
         'filename' => $apiResponse['filename'] ?? "clip_{$videoId}_{$startTime}-{$endTime}.mp4",
         'message' => 'Clip ready for download'
     ]);

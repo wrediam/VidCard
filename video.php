@@ -106,7 +106,10 @@ class Video {
         
         curl_close($ch);
         
-        $channelThumbnail = $channelData['items'][0]['snippet']['thumbnails']['default']['url'] ?? '';
+        // Get channel thumbnail (prefer higher quality)
+        $channelThumbnails = $channelData['items'][0]['snippet']['thumbnails'] ?? [];
+        $channelThumbnail = $channelThumbnails['high']['url'] ?? $channelThumbnails['medium']['url'] ?? $channelThumbnails['default']['url'] ?? '';
+        
         $channelHandle = $channelData['items'][0]['snippet']['customUrl'] ?? '';
         
         // Ensure handle starts with @
@@ -119,7 +122,7 @@ class Video {
             $channelHandle = '@' . str_replace(' ', '', $videoData['channelTitle']);
         }
         
-        // Get thumbnail URL
+        // Get video thumbnail URL
         $thumbnails = $videoData['thumbnails'];
         $thumbnailUrl = $thumbnails['maxres']['url'] ?? $thumbnails['high']['url'] ?? $thumbnails['medium']['url'] ?? '';
         
@@ -130,7 +133,7 @@ class Video {
             'thumbnail_url' => $thumbnailUrl,
             'channel_name' => $videoData['channelTitle'],
             'channel_url' => 'https://www.youtube.com/channel/' . $channelId,
-            'channel_thumbnail' => $channelThumbnails[0]['url'] ?? '',
+            'channel_thumbnail' => $channelThumbnail,
             'channel_handle' => $channelHandle,
             'youtube_url' => 'https://www.youtube.com/watch?v=' . $videoId,
             'duration' => $duration

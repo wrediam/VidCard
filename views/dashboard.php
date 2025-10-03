@@ -2271,6 +2271,8 @@
                 
                 const data = await response.json();
                 
+                console.log('Download response:', data);
+                
                 if (data.success && data.download_url) {
                     // Open download link in new tab
                     window.open(data.download_url, '_blank');
@@ -2283,7 +2285,17 @@
                         btn.disabled = false;
                     }, 2000);
                 } else {
-                    showToast('Error: ' + (data.error || 'Failed to download clip'), 'error');
+                    // Log the full response for debugging
+                    console.error('Download failed:', data);
+                    
+                    const errorMsg = data.error || 'No download URL received';
+                    showToast('Error: ' + errorMsg, 'error');
+                    
+                    // Show API response in console if available
+                    if (data.api_response) {
+                        console.error('API Response:', data.api_response);
+                    }
+                    
                     btn.innerHTML = originalHTML;
                     btn.disabled = false;
                 }
