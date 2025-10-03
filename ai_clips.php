@@ -32,9 +32,12 @@ class AIClips {
         
         try {
             // Intelligently chunk transcript if too long
-            $textToSend = $this->prepareTranscriptForAI($transcriptText);
+            $chunkInfo = $this->prepareTranscriptForAI($transcriptText);
+            $textToSend = $chunkInfo['text'];
+            $chunkStartPos = $chunkInfo['start_pos'];
+            $chunkEndPos = $chunkInfo['end_pos'];
             
-            error_log("Sending transcript to n8n: " . strlen($textToSend) . " characters (original: " . strlen($transcriptText) . " chars)");
+            error_log("Sending transcript to n8n: " . strlen($textToSend) . " characters (original: " . strlen($transcriptText) . " chars, chunk: {$chunkStartPos}-{$chunkEndPos})");
             
             // Send clean transcript text to n8n webhook (not timestamped version)
             $ch = curl_init();
@@ -115,8 +118,10 @@ class AIClips {
                     error_log("Processing clip #$index: " . substr($quotation, 0, 80) . "...");
                     error_log("Clip #$index: Full AI quote: " . $quotation);
                     
-                    // STEP 1: Verify and correct the AI's quotation against the actual transcript
-                    $verifiedQuotation = $this->verifyAndCorrectQuotation($quotation, $transcriptText, $index);
+                    // STEP 1: Verify and correct the AI's quotation against the chunk we sent to n8n
+                    // Extract the chunk from the full transcript
+                    $chunkText = substr($transcriptText, $chunkStartPos, $chunkEndPos - $chunkStartPos);
+                    $verifiedQuotation = $this->verifyAndCorrectQuotation($quotation, $chunkText, $index, $chunkStartPos);
                     
                     if (!$verifiedQuotation) {
                         error_log("Could not verify quotation #$index against transcript. Skipping.");
@@ -192,7 +197,11 @@ class AIClips {
         // If transcript is short enough, send it all
         if ($textLength <= $maxChars) {
             error_log("Transcript is {$textLength} chars, sending full transcript");
-            return $transcriptText;
+            return [
+                'text' => $transcriptText,
+                'start_pos' => 0,
+                'end_pos' => $textLength
+            ];
         }
         
         error_log("Transcript is {$textLength} chars, selecting strategic chunk");
@@ -253,7 +262,11 @@ class AIClips {
         if (strlen($chunk) < $minChars && $textLength > $minChars) {
             // Fallback: just take first $maxChars
             error_log("Chunk too small after boundary adjustment, using first {$maxChars} chars");
-            return substr($transcriptText, 0, $maxChars);
+            return [
+                'text' => substr($transcriptText, 0, $maxChars),
+                'start_pos' => 0,
+                'end_pos' => $maxChars
+            ];
         }
         
         $chunkLength = strlen($chunk);
@@ -262,7 +275,11 @@ class AIClips {
         
         error_log("Selected chunk: {$chunkLength} chars from {$startPercent}% to {$endPercent}% of transcript (quality score: {$bestScore})");
         
-        return $chunk;
+        return [
+            'text' => $chunk,
+            'start_pos' => $startOffset,
+            'end_pos' => $startOffset + $chunkLength
+        ];
     }
     
     /**
@@ -506,8 +523,8 @@ class AIClips {
      * Verify AI's quotation against actual transcript and correct if needed
      * Returns the corrected quotation from the actual transcript
      */
-    private function verifyAndCorrectQuotation($aiQuotation, $transcriptText, $clipIndex = 0) {
-        error_log("Clip #$clipIndex: Verifying AI quotation...");
+    private function verifyAndCorrectQuotation($aiQuotation, $transcriptText, $clipIndex = 0, $chunkOffset = 0) {
+        error_log("Clip #$clipIndex: Verifying AI quotation (chunk offset: {$chunkOffset})...");
         
         // Normalize both texts for comparison
         $normalizedAI = $this->normalizeText($aiQuotation);
@@ -590,8 +607,8 @@ class AIClips {
             'corrected_text' => trim($correctedText),
             'was_corrected' => $wasCorrected,
             'similarity_score' => round($similarityPercent, 2),
-            'start_pos' => $startPos,
-            'end_pos' => $endPos
+            'start_pos' => $startPos + $chunkOffset, // Adjust for chunk offset in full transcript
+            'end_pos' => $endPos + $chunkOffset // Adjust for chunk offset in full transcript
         ];
     }
     
