@@ -1984,6 +1984,14 @@
                 return `${mins}:${secs.toString().padStart(2, '0')}`;
             };
             
+            // Enforce 6-minute max clip length
+            const currentDuration = clipEndTime - clipStartTime;
+            if (currentDuration > 360) {
+                // Clip is too long, adjust end time
+                clipEndTime = clipStartTime + 360;
+                console.warn('Clip duration exceeded 6 minutes, adjusted to 6 minutes');
+            }
+            
             // Update timeline UI
             updateTimelineUI();
             
@@ -2001,6 +2009,8 @@
             const startPercent = (clipStartTime / videoDuration) * 100;
             const endPercent = (clipEndTime / videoDuration) * 100;
             const widthPercent = endPercent - startPercent;
+            
+            console.log(`Timeline: start=${clipStartTime}s (${startPercent.toFixed(1)}%), end=${clipEndTime}s (${endPercent.toFixed(1)}%), duration=${videoDuration}s`);
             
             const clipSegment = document.getElementById('clipSegment');
             clipSegment.style.left = `${startPercent}%`;
@@ -2047,7 +2057,9 @@
                 
                 if (dragType === 'start') {
                     // Don't allow start to go past end (keep 1 second minimum)
-                    clipStartTime = Math.min(newTime, clipEndTime - 1);
+                    // Max clip length is 6 minutes (360 seconds)
+                    const minStartTime = Math.max(0, clipEndTime - 360);
+                    clipStartTime = Math.max(Math.min(newTime, clipEndTime - 1), minStartTime);
                 } else if (dragType === 'end') {
                     // Don't allow end to go before start (keep 1 second minimum)
                     // Max clip length is 6 minutes (360 seconds)
