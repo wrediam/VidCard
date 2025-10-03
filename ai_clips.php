@@ -373,6 +373,13 @@ class AIClips {
                 $durationMs = $endMs - $startMs;
                 $durationSec = round($durationMs / 1000);
                 
+                // Reject matches with unreasonable duration (max 3 minutes for a clip)
+                $maxDurationMs = 180000; // 3 minutes in milliseconds
+                if ($durationMs > $maxDurationMs) {
+                    error_log("Clip #$clipIndex: Rejecting match at segment $i - duration too long: {$durationSec}s (max 180s). Words are too scattered.");
+                    continue; // Skip this match and keep searching
+                }
+                
                 if ($confidence > $bestConfidence) {
                     error_log("Clip #$clipIndex: Found match at segment $i - confidence: " . round($confidence * 100) . "%, duration: {$durationSec}s, matched {$matchedWords}/" . count($quotationWords) . " words");
                     
@@ -383,9 +390,9 @@ class AIClips {
                     ];
                     $bestConfidence = $confidence;
                     
-                    // If we have a perfect or near-perfect match, use it
+                    // If we have a perfect or near-perfect match with reasonable duration, use it
                     if ($confidence >= 0.95) {
-                        error_log("Clip #$clipIndex: Found excellent match at segment $i with confidence " . round($confidence * 100) . "%");
+                        error_log("Clip #$clipIndex: Found excellent match at segment $i with confidence " . round($confidence * 100) . "% and duration {$durationSec}s");
                         return $bestMatch;
                     }
                 }
