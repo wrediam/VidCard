@@ -70,25 +70,42 @@ class AIClips {
                 throw new Exception('No clip suggestions generated');
             }
             
-            // Parse transcript_raw JSON
+            // Parse transcript_raw JSON - handle nested structure
             $rawData = is_string($transcriptRaw) ? json_decode($transcriptRaw, true) : $transcriptRaw;
-            if (!$rawData) {
-                error_log("Failed to parse transcript_raw JSON");
-                throw new Exception('Invalid transcript raw data format');
+            
+            // Check if data is wrapped in {"data": "..."} structure
+            if (isset($rawData['data']) && is_string($rawData['data'])) {
+                error_log("Unwrapping nested transcript_raw data structure");
+                $rawData = json_decode($rawData['data'], true);
             }
+            
+            if (!$rawData || !isset($rawData['events'])) {
+                error_log("Failed to parse transcript_raw JSON or missing events array. Structure: " . print_r(array_keys($rawData ?: []), true));
+                throw new Exception('Invalid transcript raw data format - missing events structure');
+            }
+            
+            error_log("Successfully parsed transcript_raw with " . count($rawData['events']) . " events");
             
             // Process each suggestion to locate timestamps from quotations
             $processedSuggestions = [];
             foreach ($clipSuggestions as $index => $suggestion) {
                 try {
-                    // Expected format: suggestion should have 'quotation' field with exact text
-                    if (!isset($suggestion['quotation']) || empty($suggestion['quotation'])) {
-                        error_log("Clip suggestion #$index missing quotation field");
+                    // Check for quotation field (accept both 'quotation' and 'verbatim_quote')
+                    $quotation = null;
+                    if (isset($suggestion['quotation']) && !empty($suggestion['quotation'])) {
+                        $quotation = $suggestion['quotation'];
+                    } elseif (isset($suggestion['verbatim_quote']) && !empty($suggestion['verbatim_quote'])) {
+                        $quotation = $suggestion['verbatim_quote'];
+                        error_log("Clip suggestion #$index using 'verbatim_quote' field instead of 'quotation'");
+                    }
+                    
+                    if (!$quotation) {
+                        error_log("Clip suggestion #$index missing quotation/verbatim_quote field. Available fields: " . implode(', ', array_keys($suggestion)));
                         continue;
                     }
                     
-                    $quotation = $suggestion['quotation'];
-                    $timestamps = $this->locateQuotationInTranscript($quotation, $rawData);
+                    error_log("Processing clip #$index: " . substr($quotation, 0, 80) . "...");
+                    $timestamps = $this->locateQuotationInTranscript($quotation, $rawData, $index);
                     
                     if ($timestamps) {
                         $processedSuggestions[] = [
@@ -96,10 +113,12 @@ class AIClips {
                             'start_time_ms' => $timestamps['start_time_ms'],
                             'end_time_ms' => $timestamps['end_time_ms'],
                             'suggested_title' => $suggestion['suggested_title'] ?? 'Clip ' . (count($processedSuggestions) + 1),
-                            'reason' => $suggestion['reason'] ?? 'AI-selected clip'
+                            'reason' => $suggestion['reason'] ?? 'AI-selected clip',
+                            'match_confidence' => $timestamps['match_confidence'] ?? 1.0
                         ];
+                        error_log("Successfully located clip #$index: {$timestamps['start_time_ms']}ms - {$timestamps['end_time_ms']}ms (confidence: " . round($timestamps['match_confidence'] * 100) . "%)");
                     } else {
-                        error_log("Could not locate quotation in transcript: " . substr($quotation, 0, 100));
+                        error_log("Could not locate quotation #$index in transcript. Quotation: " . substr($quotation, 0, 200));
                     }
                 } catch (Exception $e) {
                     error_log("Error processing clip suggestion #$index: " . $e->getMessage());
@@ -212,21 +231,27 @@ class AIClips {
      * Locate a text quotation in the timestamped transcript data
      * Returns start and end timestamps in milliseconds
      */
-    private function locateQuotationInTranscript($quotation, $rawData) {
+    private function locateQuotationInTranscript($quotation, $rawData, $clipIndex = 0) {
         if (!isset($rawData['events']) || !is_array($rawData['events'])) {
+            error_log("Clip #$clipIndex: No events array in rawData");
             return null;
         }
         
         // Normalize the quotation for matching (remove extra whitespace, case-insensitive)
         $normalizedQuotation = $this->normalizeText($quotation);
         $quotationWords = preg_split('/\s+/', $normalizedQuotation);
+        $quotationWords = array_filter($quotationWords); // Remove empty strings
         
         if (empty($quotationWords)) {
+            error_log("Clip #$clipIndex: Quotation normalized to empty");
             return null;
         }
         
+        error_log("Clip #$clipIndex: Looking for " . count($quotationWords) . " words. First 5: " . implode(' ', array_slice($quotationWords, 0, 5)));
+        
         // Build a searchable text array with timestamps
         $textSegments = [];
+        $totalSegments = 0;
         foreach ($rawData['events'] as $event) {
             if (!isset($event['segs']) || !is_array($event['segs'])) {
                 continue;
@@ -241,6 +266,7 @@ class AIClips {
                 }
                 
                 $text = $segment['utf8'];
+                $totalSegments++;
                 
                 // Skip newlines and music markers for matching
                 if ($text === "\n" || $text === "[Music]") {
@@ -259,8 +285,14 @@ class AIClips {
             }
         }
         
+        error_log("Clip #$clipIndex: Built " . count($textSegments) . " searchable segments from $totalSegments total segments");
+        
         // Search for the quotation in the text segments
-        $result = $this->findQuotationMatch($quotationWords, $textSegments);
+        $result = $this->findQuotationMatch($quotationWords, $textSegments, $clipIndex);
+        
+        if (!$result) {
+            error_log("Clip #$clipIndex: No match found. First 10 segment texts: " . implode(' | ', array_slice(array_column($textSegments, 'text'), 0, 10)));
+        }
         
         return $result;
     }
@@ -279,20 +311,28 @@ class AIClips {
     /**
      * Find a quotation match in text segments using fuzzy matching
      */
-    private function findQuotationMatch($quotationWords, $textSegments) {
-        $minMatchThreshold = 0.8; // 80% of words must match
+    private function findQuotationMatch($quotationWords, $textSegments, $clipIndex = 0) {
+        $minMatchThreshold = 0.7; // 70% of words must match (lowered for flexibility)
         $requiredMatches = max(1, (int)ceil(count($quotationWords) * $minMatchThreshold));
         
+        error_log("Clip #$clipIndex: Need to match at least $requiredMatches out of " . count($quotationWords) . " words");
+        
         // Try to find a sequence of segments that matches the quotation
+        $bestMatch = null;
+        $bestConfidence = 0;
+        
         for ($i = 0; $i < count($textSegments); $i++) {
             $matchedWords = 0;
             $quotationIndex = 0;
             $startMs = null;
             $endMs = null;
+            $skippedWords = 0;
+            $maxSkips = (int)ceil(count($quotationWords) * 0.2); // Allow skipping 20% of words
             
             // Try to match starting from this segment
             for ($j = $i; $j < count($textSegments) && $quotationIndex < count($quotationWords); $j++) {
                 $segmentWords = preg_split('/\s+/', $textSegments[$j]['normalized']);
+                $segmentWords = array_filter($segmentWords); // Remove empty
                 
                 foreach ($segmentWords as $segmentWord) {
                     if ($quotationIndex >= count($quotationWords)) {
@@ -308,25 +348,45 @@ class AIClips {
                         $matchedWords++;
                         $quotationIndex++;
                     } else if ($matchedWords > 0) {
-                        // Allow some flexibility - skip small words
-                        if (strlen($segmentWord) <= 2) {
+                        // Allow some flexibility - skip small words or try to skip ahead
+                        if (strlen($segmentWord) <= 2 || $skippedWords < $maxSkips) {
+                            $skippedWords++;
                             continue;
                         }
-                        // If we've already started matching and hit a mismatch, might be wrong location
+                        // Too many mismatches, might be wrong location
                         break;
                     }
                 }
             }
             
-            // Check if we found a good match
+            // Calculate confidence
+            $confidence = $matchedWords / count($quotationWords);
+            
+            // Check if this is a good match
             if ($matchedWords >= $requiredMatches && $startMs !== null && $endMs !== null) {
-                return [
-                    'start_time_ms' => $startMs,
-                    'end_time_ms' => $endMs,
-                    'match_confidence' => $matchedWords / count($quotationWords)
-                ];
+                if ($confidence > $bestConfidence) {
+                    $bestMatch = [
+                        'start_time_ms' => $startMs,
+                        'end_time_ms' => $endMs,
+                        'match_confidence' => $confidence
+                    ];
+                    $bestConfidence = $confidence;
+                    
+                    // If we have a perfect or near-perfect match, use it
+                    if ($confidence >= 0.95) {
+                        error_log("Clip #$clipIndex: Found excellent match at segment $i with confidence " . round($confidence * 100) . "%");
+                        return $bestMatch;
+                    }
+                }
             }
         }
+        
+        if ($bestMatch) {
+            error_log("Clip #$clipIndex: Found best match with confidence " . round($bestConfidence * 100) . "%");
+            return $bestMatch;
+        }
+        
+        error_log("Clip #$clipIndex: No match found meeting threshold. Best confidence was " . round($bestConfidence * 100) . "%");
         
         return null;
     }
