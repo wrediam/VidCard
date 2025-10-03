@@ -105,20 +105,33 @@ class AIClips {
                     }
                     
                     error_log("Processing clip #$index: " . substr($quotation, 0, 80) . "...");
-                    $timestamps = $this->locateQuotationInTranscript($quotation, $rawData, $index);
+                    
+                    // STEP 1: Verify and correct the AI's quotation against the actual transcript
+                    $verifiedQuotation = $this->verifyAndCorrectQuotation($quotation, $transcriptText, $index);
+                    
+                    if (!$verifiedQuotation) {
+                        error_log("Could not verify quotation #$index against transcript. Skipping.");
+                        continue;
+                    }
+                    
+                    // STEP 2: Locate the verified quotation in the timestamped data
+                    $timestamps = $this->locateQuotationInTranscript($verifiedQuotation['corrected_text'], $rawData, $index);
                     
                     if ($timestamps) {
                         $processedSuggestions[] = [
-                            'quotation' => $quotation,
+                            'quotation' => $verifiedQuotation['corrected_text'], // Use corrected version
+                            'ai_original_quote' => $quotation, // Keep original for reference
+                            'was_corrected' => $verifiedQuotation['was_corrected'],
+                            'similarity_score' => $verifiedQuotation['similarity_score'],
                             'start_time_ms' => $timestamps['start_time_ms'],
                             'end_time_ms' => $timestamps['end_time_ms'],
                             'suggested_title' => $suggestion['suggested_title'] ?? 'Clip ' . (count($processedSuggestions) + 1),
                             'reason' => $suggestion['reason'] ?? 'AI-selected clip',
                             'match_confidence' => $timestamps['match_confidence'] ?? 1.0
                         ];
-                        error_log("Successfully located clip #$index: {$timestamps['start_time_ms']}ms - {$timestamps['end_time_ms']}ms (confidence: " . round($timestamps['match_confidence'] * 100) . "%)");
+                        error_log("Successfully located clip #$index: {$timestamps['start_time_ms']}ms - {$timestamps['end_time_ms']}ms (confidence: " . round($timestamps['match_confidence'] * 100) . "%, corrected: " . ($verifiedQuotation['was_corrected'] ? 'yes' : 'no') . ")");
                     } else {
-                        error_log("Could not locate quotation #$index in transcript. Quotation: " . substr($quotation, 0, 200));
+                        error_log("Could not locate quotation #$index in transcript. Quotation: " . substr($verifiedQuotation['corrected_text'], 0, 200));
                     }
                 } catch (Exception $e) {
                     error_log("Error processing clip suggestion #$index: " . $e->getMessage());
@@ -296,6 +309,164 @@ class AIClips {
         }
         
         return $result;
+    }
+    
+    /**
+     * Verify AI's quotation against actual transcript and correct if needed
+     * Returns the corrected quotation from the actual transcript
+     */
+    private function verifyAndCorrectQuotation($aiQuotation, $transcriptText, $clipIndex = 0) {
+        error_log("Clip #$clipIndex: Verifying AI quotation...");
+        
+        // Normalize both texts for comparison
+        $normalizedAI = $this->normalizeText($aiQuotation);
+        $normalizedTranscript = $this->normalizeText($transcriptText);
+        
+        // Extract key phrases from AI quotation (first 5-10 words and last 5-10 words)
+        $aiWords = preg_split('/\s+/', $normalizedAI);
+        $aiWords = array_filter($aiWords);
+        
+        if (count($aiWords) < 5) {
+            error_log("Clip #$clipIndex: AI quotation too short for reliable matching");
+            return null;
+        }
+        
+        // Create search patterns using beginning and end of quote
+        $startWords = array_slice($aiWords, 0, min(8, count($aiWords)));
+        $endWords = array_slice($aiWords, -min(8, count($aiWords)));
+        
+        $startPattern = implode('\\s+', array_map('preg_quote', $startWords));
+        $endPattern = implode('\\s+', array_map('preg_quote', $endWords));
+        
+        // Try to find the approximate location in transcript
+        // Look for start pattern with some flexibility
+        $startPos = $this->findFlexibleMatch($startWords, $normalizedTranscript);
+        
+        if ($startPos === false) {
+            error_log("Clip #$clipIndex: Could not find start of quotation in transcript");
+            return null;
+        }
+        
+        // Look for end pattern after start position
+        $endPos = $this->findFlexibleMatch($endWords, $normalizedTranscript, $startPos);
+        
+        if ($endPos === false) {
+            // If we can't find end, estimate based on AI quote length
+            $estimatedLength = strlen($normalizedAI) * 1.3; // Allow 30% variance
+            $endPos = min($startPos + $estimatedLength, strlen($normalizedTranscript));
+            error_log("Clip #$clipIndex: Could not find exact end, using estimated position");
+        }
+        
+        // Extract the actual text from transcript
+        $extractedText = substr($normalizedTranscript, $startPos, $endPos - $startPos);
+        
+        // Get the original (non-normalized) text from the transcript
+        // We need to map back to the original text with proper capitalization/punctuation
+        $correctedText = $this->extractOriginalText($transcriptText, $startPos, $endPos - $startPos);
+        
+        // Calculate similarity score
+        similar_text($normalizedAI, $extractedText, $similarityPercent);
+        
+        $wasCorrected = ($similarityPercent < 98); // Consider it corrected if less than 98% similar
+        
+        error_log("Clip #$clipIndex: Similarity: " . round($similarityPercent, 2) . "%, Corrected: " . ($wasCorrected ? 'yes' : 'no'));
+        
+        if ($similarityPercent < 50) {
+            error_log("Clip #$clipIndex: Similarity too low (" . round($similarityPercent, 2) . "%), rejecting match");
+            return null;
+        }
+        
+        return [
+            'corrected_text' => trim($correctedText),
+            'was_corrected' => $wasCorrected,
+            'similarity_score' => round($similarityPercent, 2),
+            'start_pos' => $startPos,
+            'end_pos' => $endPos
+        ];
+    }
+    
+    /**
+     * Find a flexible match for a sequence of words in text
+     * Allows for some missing words or variations
+     */
+    private function findFlexibleMatch($searchWords, $text, $startOffset = 0) {
+        $textWords = preg_split('/\s+/', substr($text, $startOffset));
+        $textWords = array_filter($textWords);
+        
+        $minMatchRatio = 0.7; // At least 70% of search words must match
+        $requiredMatches = max(3, (int)ceil(count($searchWords) * $minMatchRatio));
+        
+        // Sliding window search
+        for ($i = 0; $i < count($textWords) - count($searchWords) + 1; $i++) {
+            $matchCount = 0;
+            $windowWords = array_slice($textWords, $i, count($searchWords) * 2); // Look in wider window
+            
+            foreach ($searchWords as $searchWord) {
+                foreach ($windowWords as $windowWord) {
+                    if ($this->wordsMatch($searchWord, $windowWord)) {
+                        $matchCount++;
+                        break; // Found this search word, move to next
+                    }
+                }
+            }
+            
+            if ($matchCount >= $requiredMatches) {
+                // Calculate approximate character position
+                $charPos = 0;
+                for ($j = 0; $j < $i; $j++) {
+                    $charPos += strlen($textWords[$j]) + 1; // +1 for space
+                }
+                return $startOffset + $charPos;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Extract original text (with proper case/punctuation) from transcript
+     */
+    private function extractOriginalText($originalTranscript, $normalizedStartPos, $normalizedLength) {
+        // This is an approximation since normalized text has different length
+        // We need to map normalized position back to original
+        
+        $normalized = $this->normalizeText($originalTranscript);
+        
+        // Find the actual start position in original text
+        $currentNormPos = 0;
+        $currentOrigPos = 0;
+        $origLength = strlen($originalTranscript);
+        
+        // Map normalized start position to original position
+        while ($currentNormPos < $normalizedStartPos && $currentOrigPos < $origLength) {
+            $origChar = $originalTranscript[$currentOrigPos];
+            $normChar = $this->normalizeText($origChar);
+            
+            if (!empty($normChar)) {
+                $currentNormPos++;
+            }
+            $currentOrigPos++;
+        }
+        
+        $startPos = $currentOrigPos;
+        
+        // Map normalized length to original length
+        $currentNormPos = 0;
+        $currentOrigPos = $startPos;
+        
+        while ($currentNormPos < $normalizedLength && $currentOrigPos < $origLength) {
+            $origChar = $originalTranscript[$currentOrigPos];
+            $normChar = $this->normalizeText($origChar);
+            
+            if (!empty($normChar)) {
+                $currentNormPos++;
+            }
+            $currentOrigPos++;
+        }
+        
+        $length = $currentOrigPos - $startPos;
+        
+        return substr($originalTranscript, $startPos, $length);
     }
     
     /**
