@@ -231,25 +231,13 @@
                 </div>
             </div>
             <div class="sticky bottom-0 bg-slate-50 border-t border-slate-200 p-4 rounded-b-lg flex justify-between">
-                <div class="flex gap-2">
-                    <button 
-                        onclick="copyTranscript()"
-                        id="copyTranscriptBtn"
-                        class="px-4 py-2 bg-slate-900 text-white rounded-md font-medium hover:bg-slate-800 transition"
-                    >
-                        Copy Transcript
-                    </button>
-                    <button 
-                        onclick="openAITools()"
-                        id="aiToolsBtn"
-                        class="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md font-medium hover:from-purple-700 hover:to-blue-700 transition flex items-center gap-2"
-                    >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                        </svg>
-                        AI Tools
-                    </button>
-                </div>
+                <button 
+                    onclick="copyTranscript()"
+                    id="copyTranscriptBtn"
+                    class="px-4 py-2 bg-slate-900 text-white rounded-md font-medium hover:bg-slate-800 transition"
+                >
+                    Copy Transcript
+                </button>
                 <button 
                     onclick="closeTranscriptModal()"
                     class="px-4 py-2 border border-slate-300 text-slate-700 rounded-md font-medium hover:bg-slate-50 transition"
@@ -727,6 +715,15 @@
                                                     ${video.transcript_text ? 'View Transcript' : 'Retrieve Transcript'}
                                                 </button>`
                                             }
+                                            ${!video.transcript_unavailable && video.transcript_text ? 
+                                                `<span class="text-slate-300">•</span>
+                                                <button onclick="event.stopPropagation(); openAIToolsFromCard('${video.video_id}')" class="text-purple-600 hover:text-purple-800 underline flex items-center gap-1">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                                    </svg>
+                                                    AI Tools
+                                                </button>` : ''
+                                            }
                                             <span class="text-slate-300">•</span>
                                             <button onclick="event.stopPropagation(); showDeleteModal('${video.video_id}')" class="text-red-600 hover:text-red-800 underline">
                                                 Delete
@@ -800,6 +797,15 @@
                                         `<button onclick="viewTranscript('${video.video_id}', ${video.transcript_text ? 'true' : 'false'})" class="text-blue-600 hover:text-blue-800 underline transition-colors">
                                             ${video.transcript_text ? 'View Transcript' : 'Retrieve Transcript'}
                                         </button>`
+                                    }
+                                    ${!video.transcript_unavailable && video.transcript_text ? 
+                                        `<span class="text-slate-300">•</span>
+                                        <button onclick="openAIToolsFromCard('${video.video_id}')" class="text-purple-600 hover:text-purple-800 underline transition-colors inline-flex items-center gap-1">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                            </svg>
+                                            AI Tools
+                                        </button>` : ''
                                     }
                                     <span class="text-slate-300">•</span>
                                     <button onclick="showDeleteModal('${video.video_id}')" class="text-red-600 hover:text-red-800 underline transition-colors">
@@ -1181,6 +1187,17 @@
         }
 
         // AI Tools functionality
+        async function openAIToolsFromCard(videoId) {
+            // Set the current video ID
+            currentVideoId = videoId;
+            
+            // Open AI Tools modal directly
+            document.getElementById('aiToolsModal').classList.remove('hidden');
+            
+            // Try to load existing suggestions
+            await loadExistingPostSuggestions();
+        }
+
         async function openAITools() {
             if (!currentTranscript) {
                 alert('Please load the transcript first');
