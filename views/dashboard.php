@@ -444,6 +444,10 @@
                                                         draggable="false"
                                                     >
                                                         <div class="w-0.5 h-6 bg-white opacity-70 group-hover:opacity-100"></div>
+                                                        <!-- Start tag -->
+                                                        <div class="absolute -left-14 top-1/2 -translate-y-1/2 px-2 py-1 bg-orange-600 text-white text-xs font-semibold rounded-l-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                                            Start <span class="ml-0.5">▶</span>
+                                                        </div>
                                                     </div>
                                                     
                                                     <!-- End handle -->
@@ -453,6 +457,10 @@
                                                         draggable="false"
                                                     >
                                                         <div class="w-0.5 h-6 bg-white opacity-70 group-hover:opacity-100"></div>
+                                                        <!-- End tag -->
+                                                        <div class="absolute -right-12 top-1/2 -translate-y-1/2 px-2 py-1 bg-red-600 text-white text-xs font-semibold rounded-r-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                                            <span class="mr-0.5">◀</span> End
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1865,9 +1873,9 @@
             clipStartTime = startSeconds;
             clipEndTime = endSeconds;
             
-            // Get video duration from YouTube API or estimate
-            // For now, we'll use a reasonable estimate based on clip end time
-            videoDuration = Math.max(endSeconds + 60, 300); // At least 5 minutes or clip end + 1 minute
+            // Set video duration to allow full timeline adjustment
+            // Allow up to 6 minutes (360 seconds) for clip selection
+            videoDuration = Math.max(endSeconds + 120, 360); // At least 6 minutes or clip end + 2 minutes
             
             // Format time display
             const formatTime = (seconds) => {
@@ -1879,8 +1887,9 @@
             // Update clip info
             document.getElementById('clipTitle').textContent = clip.suggested_title;
             document.getElementById('clipReason').textContent = clip.reason;
-            document.querySelector('#clipDuration span').textContent = `${durationSeconds}s duration`;
-            document.querySelector('#clipTimestamp span').textContent = `${formatTime(startSeconds)} - ${formatTime(endSeconds)}`;
+            
+            // Update clip info displays (will be updated again by updateClipInfoDisplay)
+            updateClipInfoDisplay();
             
             // Update YouTube embed with start and end parameters
             updateClipEmbed();
@@ -1985,7 +1994,9 @@
                     clipStartTime = Math.min(newTime, clipEndTime - 1);
                 } else if (dragType === 'end') {
                     // Don't allow end to go before start (keep 1 second minimum)
-                    clipEndTime = Math.max(newTime, clipStartTime + 1);
+                    // Max clip length is 6 minutes (360 seconds)
+                    const maxEndTime = Math.min(clipStartTime + 360, videoDuration);
+                    clipEndTime = Math.max(Math.min(newTime, maxEndTime), clipStartTime + 1);
                 }
                 
                 updateTimelineUI();
@@ -2018,6 +2029,9 @@
             document.getElementById('clipStartLabel').textContent = formatTime(clipStartTime);
             document.getElementById('clipEndLabel').textContent = formatTime(clipEndTime);
             document.getElementById('clipDurationLabel').textContent = `${clipEndTime - clipStartTime}s`;
+            
+            // Also update the clip info display
+            updateClipInfoDisplay();
         }
 
         function updateClipEmbed() {
@@ -2033,6 +2047,18 @@
                     class="absolute top-0 left-0 w-full h-full"
                 ></iframe>
             `;
+        }
+
+        function updateClipInfoDisplay() {
+            const formatTime = (seconds) => {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            };
+            
+            const durationSeconds = clipEndTime - clipStartTime;
+            document.querySelector('#clipDuration span').textContent = `${durationSeconds}s duration`;
+            document.querySelector('#clipTimestamp span').textContent = `${formatTime(clipStartTime)} - ${formatTime(clipEndTime)}`;
         }
 
         async function saveClipEdit() {
