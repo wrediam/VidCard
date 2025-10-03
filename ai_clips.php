@@ -152,8 +152,12 @@ class AIClips {
             }
             
             if (empty($processedSuggestions)) {
-                throw new Exception('Could not locate any quotations in the transcript');
+                error_log('No clip suggestions could be verified and located in transcript');
+                // Return empty array instead of throwing - let frontend handle it gracefully
+                return [];
             }
+            
+            error_log('Successfully processed ' . count($processedSuggestions) . ' out of ' . count($clipSuggestions) . ' AI suggestions');
             
             // Save to database (will overwrite existing suggestions for this video)
             $this->saveClipSuggestions($videoId, $userId, $processedSuggestions);
@@ -538,8 +542,9 @@ class AIClips {
         error_log("Clip #$clipIndex: AI quote (first 100 chars): " . substr($aiQuotation, 0, 100) . "...");
         error_log("Clip #$clipIndex: Extracted from DB (first 100 chars): " . substr($correctedText, 0, 100) . "...");
         
-        if ($similarityPercent < 60) {
-            error_log("Clip #$clipIndex: Similarity too low (" . round($similarityPercent, 2) . "%), rejecting match");
+        // Require high similarity - if AI quote doesn't closely match DB text, it's wrong
+        if ($similarityPercent < 85) {
+            error_log("Clip #$clipIndex: Similarity too low (" . round($similarityPercent, 2) . "%), rejecting match (need 85%+)");
             return null;
         }
         
@@ -652,10 +657,15 @@ class AIClips {
      */
     private function normalizeText($text) {
         $text = strtolower(trim($text));
+        // Replace all whitespace (including \n, \r, \t) with single space
         $text = preg_replace('/\s+/', ' ', $text);
         // Remove common punctuation for more flexible matching
-        $text = preg_replace('/[.,!?;:"]/', '', $text);
-        return $text;
+        $text = preg_replace('/[.,!?;:"\']/', '', $text);
+        // Remove any remaining escape sequences
+        $text = str_replace(['\\n', '\\r', '\\t'], ' ', $text);
+        // Clean up multiple spaces again
+        $text = preg_replace('/\s+/', ' ', $text);
+        return trim($text);
     }
     
     /**
