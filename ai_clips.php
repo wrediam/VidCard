@@ -327,6 +327,7 @@ class AIClips {
             $quotationIndex = 0;
             $startMs = null;
             $endMs = null;
+            $firstMatchSegmentIndex = null;
             $skippedWords = 0;
             $maxSkips = (int)ceil(count($quotationWords) * 0.2); // Allow skipping 20% of words
             
@@ -342,7 +343,9 @@ class AIClips {
                     
                     // Check if current quotation word matches (exact or partial)
                     if ($this->wordsMatch($quotationWords[$quotationIndex], $segmentWord)) {
-                        if ($startMs === null) {
+                        if ($firstMatchSegmentIndex === null) {
+                            // Track the segment where we found the first match
+                            $firstMatchSegmentIndex = $j;
                             // Use the event's tStartMs for the clip start
                             $startMs = $textSegments[$j]['event_start_ms'];
                         }
@@ -367,7 +370,12 @@ class AIClips {
             
             // Check if this is a good match
             if ($matchedWords >= $requiredMatches && $startMs !== null && $endMs !== null) {
+                $durationMs = $endMs - $startMs;
+                $durationSec = round($durationMs / 1000);
+                
                 if ($confidence > $bestConfidence) {
+                    error_log("Clip #$clipIndex: Found match at segment $i - confidence: " . round($confidence * 100) . "%, duration: {$durationSec}s, matched {$matchedWords}/" . count($quotationWords) . " words");
+                    
                     $bestMatch = [
                         'start_time_ms' => $startMs,
                         'end_time_ms' => $endMs,
@@ -385,7 +393,11 @@ class AIClips {
         }
         
         if ($bestMatch) {
-            error_log("Clip #$clipIndex: Found best match with confidence " . round($bestConfidence * 100) . "% - Start: {$bestMatch['start_time_ms']}ms, End: {$bestMatch['end_time_ms']}ms, Duration: " . ($bestMatch['end_time_ms'] - $bestMatch['start_time_ms']) . "ms");
+            $durationMs = $bestMatch['end_time_ms'] - $bestMatch['start_time_ms'];
+            $durationSec = round($durationMs / 1000);
+            $startSec = round($bestMatch['start_time_ms'] / 1000);
+            $endSec = round($bestMatch['end_time_ms'] / 1000);
+            error_log("Clip #$clipIndex: Found best match with confidence " . round($bestConfidence * 100) . "% - Start: {$bestMatch['start_time_ms']}ms ({$startSec}s), End: {$bestMatch['end_time_ms']}ms ({$endSec}s), Duration: {$durationMs}ms ({$durationSec}s)");
             return $bestMatch;
         }
         
