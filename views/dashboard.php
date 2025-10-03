@@ -2242,7 +2242,12 @@
         }
 
         async function downloadClip() {
-            if (!currentVideoData) return;
+            if (!currentVideoData) {
+                console.error('No current video data');
+                return;
+            }
+            
+            console.log('Downloading clip for video:', currentVideoData.video_id, 'from', clipStartTime, 'to', clipEndTime);
             
             const btn = document.getElementById('downloadClipBtn');
             const originalHTML = btn.innerHTML;
@@ -2274,8 +2279,13 @@
                 console.log('Download response:', data);
                 
                 if (data.success && data.download_url) {
-                    // Open download link in new tab
-                    window.open(data.download_url, '_blank');
+                    // Create a temporary link and trigger download
+                    const a = document.createElement('a');
+                    a.href = data.download_url;
+                    a.download = data.filename || 'clip.mp4';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
                     
                     showToast('Clip download started! Check your downloads folder.', 'success');
                     
