@@ -2282,8 +2282,16 @@
                     // Force HTTPS for security (mixed content protection)
                     let downloadUrl = data.download_url.replace('http://', 'https://');
                     
-                    // Open download URL - browser will handle the download
-                    window.location.href = downloadUrl;
+                    // Create invisible iframe to trigger download without navigation
+                    const iframe = document.createElement('iframe');
+                    iframe.style.display = 'none';
+                    iframe.src = downloadUrl;
+                    document.body.appendChild(iframe);
+                    
+                    // Remove iframe after download starts
+                    setTimeout(() => {
+                        document.body.removeChild(iframe);
+                    }, 5000);
                     
                     showToast('Clip download started! Check your downloads folder.', 'success');
                     
