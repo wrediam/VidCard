@@ -571,6 +571,30 @@ class AIClips {
     }
     
     /**
+     * Map a position in normalized text to the corresponding position in original text
+     */
+    private function mapNormalizedToOriginalPosition($originalText, $normalizedPosition) {
+        $normalized = $this->normalizeText($originalText);
+        
+        // Count characters in normalized text up to position
+        $normalizedChars = substr($normalized, 0, $normalizedPosition);
+        $targetWordCount = str_word_count($normalizedChars);
+        
+        // Count words in original text to find equivalent position
+        $words = str_word_count($originalText, 2); // Get words with positions
+        $wordPositions = array_keys($words);
+        
+        if ($targetWordCount > 0 && $targetWordCount <= count($wordPositions)) {
+            // Return position of the target word in original text
+            return $wordPositions[$targetWordCount - 1];
+        }
+        
+        // Fallback: approximate ratio-based mapping
+        $ratio = $normalizedPosition / max(1, strlen($normalized));
+        return (int)($ratio * strlen($originalText));
+    }
+    
+    /**
      * Verify AI's quotation against actual transcript and correct if needed
      * Returns the corrected quotation from the actual transcript
      */
@@ -625,21 +649,23 @@ class AIClips {
             return null;
         }
         
-        error_log("Clip #$clipIndex: Found start position at char {$startPos}");
+        error_log("Clip #$clipIndex: Found start position at char {$startPos} in normalized text");
         
-        // Estimate end position based on AI quote length
-        $estimatedLength = strlen($normalizedAI) * 1.1; // Allow 10% variance
-        $endPos = min($startPos + $estimatedLength, strlen($normalizedTranscript));
+        // Now find the same position in the ORIGINAL text
+        // We need to map from normalized position to original position
+        $originalStartPos = $this->mapNormalizedToOriginalPosition($transcriptText, $startPos);
         
-        error_log("Clip #$clipIndex: Using estimated end position at char {$endPos}");
+        error_log("Clip #$clipIndex: Mapped to position {$originalStartPos} in original text");
         
-        // Extract the actual text from transcript
-        $extractedLength = (int)($endPos - $startPos);
-        $extractedText = substr($normalizedTranscript, $startPos, $extractedLength);
+        // Estimate length in original text (add buffer for punctuation/newlines)
+        $estimatedLength = (int)(strlen($normalizedAI) * 1.3); // 30% buffer for formatting
         
-        // Get the original (non-normalized) text from the transcript
-        // Use the chunk text directly since we're already searching within it
-        $correctedText = substr($transcriptText, $startPos, $extractedLength);
+        // Extract from original text
+        $correctedText = substr($transcriptText, $originalStartPos, $estimatedLength);
+        
+        // Also extract from normalized for similarity check
+        $normalizedExtractedLength = (int)(strlen($normalizedAI) * 1.1);
+        $extractedText = substr($normalizedTranscript, $startPos, $normalizedExtractedLength);
         
         // Calculate similarity score
         similar_text($normalizedAI, $extractedText, $similarityPercent);
@@ -660,8 +686,8 @@ class AIClips {
             'corrected_text' => trim($correctedText),
             'was_corrected' => $wasCorrected,
             'similarity_score' => round($similarityPercent, 2),
-            'start_pos' => $startPos + $chunkOffset, // Adjust for chunk offset in full transcript
-            'end_pos' => $endPos + $chunkOffset // Adjust for chunk offset in full transcript
+            'start_pos' => $originalStartPos + $chunkOffset, // Adjust for chunk offset in full transcript
+            'end_pos' => $originalStartPos + $estimatedLength + $chunkOffset // Adjust for chunk offset in full transcript
         ];
     }
     
