@@ -1693,15 +1693,21 @@
             }
 
             try {
+                // Set a 3-minute timeout for clip generation
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minutes
+                
                 const response = await fetch('/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         action: 'generate_clip_suggestions',
                         video_id: currentVideoId 
-                    })
+                    }),
+                    signal: controller.signal
                 });
-
+                
+                clearTimeout(timeoutId);
                 const data = await response.json();
 
                 if (data.success && data.suggestions) {

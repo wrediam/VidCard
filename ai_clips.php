@@ -15,6 +15,9 @@ class AIClips {
      * Generate clip suggestions via n8n webhook
      */
     public function generateClipSuggestions($transcriptText, $transcriptRaw, $videoId, $userId) {
+        // Extend execution time for long transcripts
+        set_time_limit(180); // 3 minutes max
+        
         if (empty($this->webhookUrl)) {
             throw new Exception('n8n clip webhook URL not configured');
         }
