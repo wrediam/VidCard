@@ -121,7 +121,13 @@ class AIClips {
                     }
                     
                     // STEP 2: Locate the verified quotation in the timestamped data
-                    $timestamps = $this->locateQuotationInTranscript($verifiedQuotation['corrected_text'], $rawData, $index);
+                    // Pass position hint to speed up search
+                    $positionHint = [
+                        'start_pos' => $verifiedQuotation['start_pos'],
+                        'end_pos' => $verifiedQuotation['end_pos'],
+                        'transcript_length' => strlen($transcriptText)
+                    ];
+                    $timestamps = $this->locateQuotationInTranscript($verifiedQuotation['corrected_text'], $rawData, $index, $positionHint);
                     
                     if ($timestamps) {
                         $startSec = round($timestamps['start_time_ms'] / 1000);
@@ -393,7 +399,7 @@ class AIClips {
      * Locate a text quotation in the timestamped transcript data
      * Returns start and end timestamps in milliseconds
      */
-    private function locateQuotationInTranscript($quotation, $rawData, $clipIndex = 0) {
+    private function locateQuotationInTranscript($quotation, $rawData, $clipIndex = 0, $positionHint = null) {
         if (!isset($rawData['events']) || !is_array($rawData['events'])) {
             error_log("Clip #$clipIndex: No events array in rawData");
             return null;
@@ -411,9 +417,35 @@ class AIClips {
         
         error_log("Clip #$clipIndex: Looking for " . count($quotationWords) . " words. First 5: " . implode(' ', array_slice($quotationWords, 0, 5)));
         
-        // Build a searchable text array with timestamps
+        // Calculate approximate timestamp range if we have position hint
+        $searchStartMs = 0;
+        $searchEndMs = PHP_INT_MAX;
+        
+        if ($positionHint && isset($positionHint['start_pos'], $positionHint['transcript_length'])) {
+            // Estimate video position based on text position
+            $totalEvents = count($rawData['events']);
+            if ($totalEvents > 0) {
+                $lastEvent = $rawData['events'][$totalEvents - 1];
+                $totalVideoMs = ($lastEvent['tStartMs'] ?? 0) + ($lastEvent['dDurationMs'] ?? 0);
+                
+                // Calculate approximate position in video
+                $textRatio = $positionHint['start_pos'] / max(1, $positionHint['transcript_length']);
+                $estimatedStartMs = (int)($totalVideoMs * $textRatio);
+                
+                // Search in a window around estimated position (±20% of video length)
+                $windowSize = (int)($totalVideoMs * 0.2);
+                $searchStartMs = max(0, $estimatedStartMs - $windowSize);
+                $searchEndMs = min($totalVideoMs, $estimatedStartMs + $windowSize);
+                
+                error_log("Clip #$clipIndex: Using position hint - searching " . round($searchStartMs/1000) . "s to " . round($searchEndMs/1000) . "s (estimated at " . round($estimatedStartMs/1000) . "s)");
+            }
+        }
+        
+        // Build a searchable text array with timestamps (only in search window)
         $textSegments = [];
         $totalSegments = 0;
+        $skippedSegments = 0;
+        
         foreach ($rawData['events'] as $event) {
             if (!isset($event['segs']) || !is_array($event['segs'])) {
                 continue;
@@ -421,6 +453,13 @@ class AIClips {
             
             $eventStartMs = $event['tStartMs'] ?? 0;
             $eventDurationMs = $event['dDurationMs'] ?? 0;
+            $eventEndMs = $eventStartMs + $eventDurationMs;
+            
+            // Skip events outside search window
+            if ($eventEndMs < $searchStartMs || $eventStartMs > $searchEndMs) {
+                $skippedSegments += count($event['segs']);
+                continue;
+            }
             
             foreach ($event['segs'] as $segment) {
                 if (!isset($segment['utf8'])) {
@@ -443,12 +482,12 @@ class AIClips {
                     'normalized' => $this->normalizeText($text),
                     'segment_start_ms' => $absoluteStartMs,
                     'event_start_ms' => $eventStartMs,
-                    'event_end_ms' => $eventStartMs + $eventDurationMs
+                    'event_end_ms' => $eventEndMs
                 ];
             }
         }
         
-        error_log("Clip #$clipIndex: Built " . count($textSegments) . " searchable segments from $totalSegments total segments");
+        error_log("Clip #$clipIndex: Built " . count($textSegments) . " searchable segments (skipped $skippedSegments outside window)");
         
         // Search for the quotation in the text segments
         $result = $this->findQuotationMatch($quotationWords, $textSegments, $clipIndex);
