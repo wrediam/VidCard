@@ -1723,7 +1723,11 @@
                 }
             } catch (error) {
                 console.error('Generate error:', error);
-                alert('Network error. Please try again.');
+                if (error.name === 'AbortError') {
+                    alert('Request timed out after 3 minutes. The video may be too long. Please try again or contact support.');
+                } else {
+                    alert('Network error: ' + error.message + '. Please try again.');
+                }
             } finally {
                 // Re-enable buttons and restore text
                 if (btn) {

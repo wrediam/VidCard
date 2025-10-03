@@ -1,6 +1,10 @@
 RewriteEngine On
 RewriteBase /
 
+# Increase timeouts for long-running operations (clip generation)
+php_value max_execution_time 180
+php_value max_input_time 180
+
 # Redirect all requests to index.php
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
