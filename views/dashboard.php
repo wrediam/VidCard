@@ -326,7 +326,7 @@
                                     </svg>
                                 </div>
                                 <h4 class="text-lg font-semibold text-slate-900 mb-1">Clip Suggestions</h4>
-                                <p class="text-sm text-slate-600 max-w-md mx-auto mb-4">AI-powered viral clip suggestions with timestamps and titles.</p>
+                                <p class="text-sm text-slate-600 max-w-md mx-auto mb-4">AI-powered clip suggestions.</p>
                             </div>
                             <div class="flex justify-center">
                                 <button 
@@ -345,7 +345,7 @@
                         <div class="mb-4 flex items-center justify-between">
                             <div>
                                 <h4 class="text-base font-semibold text-slate-900">Your Clip Suggestions</h4>
-                                <p class="text-xs text-slate-600 mt-0.5">AI-generated viral clip moments from your video</p>
+                                <p class="text-xs text-slate-600 mt-0.5">AI selected clip moments from your video</p>
                             </div>
                             <button 
                                 onclick="generateClipSuggestions()"
