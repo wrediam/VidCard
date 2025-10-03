@@ -311,7 +311,8 @@
                             </div>
                             <div class="flex justify-center">
                                 <button 
-                                    onclick="openClipSuggestionsModal()"
+                                    onclick="handleClipSuggestions()"
+                                    id="generateClipsBtn"
                                     class="px-6 py-2.5 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg font-medium hover:from-orange-700 hover:to-red-700 transition shadow-lg hover:shadow-xl"
                                 >
                                     Generate Clips
@@ -319,6 +320,83 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Clip Suggestions Container -->
+                    <div id="clipSuggestionsContainer" class="hidden">
+                        <div class="mb-4 flex items-center justify-between">
+                            <div>
+                                <h4 class="text-base font-semibold text-slate-900">Your Clip Suggestions</h4>
+                                <p class="text-xs text-slate-600 mt-0.5">AI-generated viral clip moments from your video</p>
+                            </div>
+                            <button 
+                                onclick="generateClipSuggestions()"
+                                id="regenerateClipsBtn"
+                                class="px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded-md font-medium hover:bg-slate-200 transition flex items-center gap-1.5"
+                            >
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                                Regenerate
+                            </button>
+                        </div>
+                        
+                        <!-- Clip Preview -->
+                        <div class="max-w-4xl mx-auto">
+                            <!-- Navigation Counter -->
+                            <div class="flex items-center justify-center gap-3 mb-3">
+                                <button 
+                                    onclick="previousClip()"
+                                    id="prevClipBtn"
+                                    class="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <svg class="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                                    </svg>
+                                </button>
+                                <span class="text-xs font-medium text-slate-600">
+                                    <span id="currentClipIndex">1</span> / <span id="totalClips">4</span>
+                                </span>
+                                <button 
+                                    onclick="nextClip()"
+                                    id="nextClipBtn"
+                                    class="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <svg class="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            
+                            <!-- Clip Card -->
+                            <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                                <!-- Clip Title & Info -->
+                                <div class="p-4 bg-gradient-to-r from-orange-50 to-red-50 border-b border-slate-200">
+                                    <h5 id="clipTitle" class="text-lg font-bold text-slate-900 mb-2"></h5>
+                                    <p id="clipReason" class="text-sm text-slate-600 mb-2"></p>
+                                    <div class="flex items-center gap-4 text-xs text-slate-500">
+                                        <span id="clipDuration" class="flex items-center gap-1">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                            <span></span>
+                                        </span>
+                                        <span id="clipTimestamp" class="flex items-center gap-1">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                            </svg>
+                                            <span></span>
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <!-- YouTube Embed -->
+                                <div id="clipEmbed" class="relative" style="padding-bottom: 56.25%; height: 0;">
+                                    <!-- Embed will be inserted here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div id="postSuggestionsContainer" class="hidden">
                         <div class="mb-4 flex items-center justify-between">
                             <div>
@@ -438,137 +516,6 @@
             <div class="sticky bottom-0 bg-slate-50 border-t border-slate-200 p-4 rounded-b-lg flex justify-end">
                 <button 
                     onclick="closeAIToolsModal()"
-                    class="px-4 py-2 border border-slate-300 text-slate-700 rounded-md font-medium hover:bg-slate-50 transition"
-                >
-                    Close
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Clip Suggestions Modal -->
-    <div id="clipSuggestionsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center overflow-y-auto p-4">
-        <div class="bg-white rounded-lg shadow-xl max-w-5xl w-full my-8">
-            <div class="sticky top-0 bg-gradient-to-r from-orange-600 to-red-600 border-b border-orange-700 p-6 flex items-center justify-between rounded-t-lg z-10">
-                <div class="flex items-center gap-3">
-                    <button onclick="backToAITools()" class="text-white hover:text-orange-100 transition">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                        </svg>
-                    </button>
-                    <h3 class="text-2xl font-bold text-white flex items-center gap-2">
-                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        Clip Suggestions
-                    </h3>
-                </div>
-                <button onclick="closeClipSuggestionsModal()" class="text-white hover:text-orange-100 transition">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            </div>
-            <div class="p-6 overflow-y-auto" style="max-height: calc(100vh - 200px);">
-                <div id="clipSuggestionsContent">
-                    <div class="text-center py-6">
-                        <div class="mb-4">
-                            <div class="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-orange-100 to-red-100 rounded-full mb-3">
-                                <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                            </div>
-                            <h4 class="text-lg font-semibold text-slate-900 mb-1">Generate Viral Clip Suggestions</h4>
-                            <p class="text-sm text-slate-600 max-w-md mx-auto">AI will analyze your video transcript to identify the most engaging moments perfect for social media clips.</p>
-                        </div>
-                        <button 
-                            id="generateClipsBtn"
-                            class="px-6 py-2.5 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg font-medium hover:from-orange-700 hover:to-red-700 transition shadow-lg hover:shadow-xl"
-                        >
-                            Generate Clip Suggestions
-                        </button>
-                    </div>
-                    <div id="clipSuggestionsContainer" class="hidden">
-                        <div class="mb-4 flex items-center justify-between">
-                            <div>
-                                <h4 class="text-base font-semibold text-slate-900">Your Clip Suggestions</h4>
-                                <p class="text-xs text-slate-600 mt-0.5">AI-generated viral clip moments from your video</p>
-                            </div>
-                            <button 
-                                onclick="generateClipSuggestions()"
-                                id="regenerateClipsBtn"
-                                class="px-3 py-1.5 text-xs bg-slate-100 text-slate-700 rounded-md font-medium hover:bg-slate-200 transition flex items-center gap-1.5"
-                            >
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                                </svg>
-                                Regenerate
-                            </button>
-                        </div>
-                        
-                        <!-- Clip Preview -->
-                        <div class="max-w-4xl mx-auto">
-                            <!-- Navigation Counter -->
-                            <div class="flex items-center justify-center gap-3 mb-3">
-                                <button 
-                                    onclick="previousClip()"
-                                    id="prevClipBtn"
-                                    class="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <svg class="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                                    </svg>
-                                </button>
-                                <span class="text-xs font-medium text-slate-600">
-                                    <span id="currentClipIndex">1</span> / <span id="totalClips">4</span>
-                                </span>
-                                <button 
-                                    onclick="nextClip()"
-                                    id="nextClipBtn"
-                                    class="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <svg class="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                            
-                            <!-- Clip Card -->
-                            <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                                <!-- Clip Title & Info -->
-                                <div class="p-4 bg-gradient-to-r from-orange-50 to-red-50 border-b border-slate-200">
-                                    <h5 id="clipTitle" class="text-lg font-bold text-slate-900 mb-2"></h5>
-                                    <p id="clipReason" class="text-sm text-slate-600 mb-2"></p>
-                                    <div class="flex items-center gap-4 text-xs text-slate-500">
-                                        <span id="clipDuration" class="flex items-center gap-1">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                            </svg>
-                                            <span></span>
-                                        </span>
-                                        <span id="clipTimestamp" class="flex items-center gap-1">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                                            </svg>
-                                            <span></span>
-                                        </span>
-                                    </div>
-                                </div>
-                                
-                                <!-- YouTube Embed -->
-                                <div id="clipEmbed" class="relative" style="padding-bottom: 56.25%; height: 0;">
-                                    <!-- Embed will be inserted here -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="sticky bottom-0 bg-slate-50 border-t border-slate-200 p-4 rounded-b-lg flex justify-end">
-                <button 
-                    onclick="closeClipSuggestionsModal()"
                     class="px-4 py-2 border border-slate-300 text-slate-700 rounded-md font-medium hover:bg-slate-50 transition"
                 >
                     Close
@@ -1287,10 +1234,12 @@
         function backToAIToolsSelection() {
             const aiToolsSelection = document.getElementById('aiToolsSelection');
             const postContainer = document.getElementById('postSuggestionsContainer');
+            const clipContainer = document.getElementById('clipSuggestionsContainer');
             const backBtn = document.getElementById('aiToolsBackBtn');
             
             if (aiToolsSelection) aiToolsSelection.classList.remove('hidden');
             if (postContainer) postContainer.classList.add('hidden');
+            if (clipContainer) clipContainer.classList.add('hidden');
             if (backBtn) backBtn.classList.add('hidden');
         }
 
@@ -1303,8 +1252,14 @@
             // Reset to selection view
             const aiToolsSelection = document.getElementById('aiToolsSelection');
             const postContainer = document.getElementById('postSuggestionsContainer');
+            const clipContainer = document.getElementById('clipSuggestionsContainer');
             if (aiToolsSelection) aiToolsSelection.classList.remove('hidden');
             if (postContainer) postContainer.classList.add('hidden');
+            if (clipContainer) clipContainer.classList.add('hidden');
+            
+            // Check for existing suggestions and update buttons
+            await checkExistingPostSuggestions();
+            await checkExistingClipSuggestions();
             
             // Hide transcript modal and show AI tools modal
             document.getElementById('transcriptModal').classList.add('hidden');
@@ -1555,12 +1510,17 @@
         let currentClipIndex = 0;
 
         // Clip Suggestions Modal Functions
-        async function openClipSuggestionsModal() {
-            // Check for existing clip suggestions and update button
-            await checkExistingClipSuggestions();
+        async function handleClipSuggestions() {
+            const btn = document.getElementById('generateClipsBtn');
+            const hasSuggestions = btn?.getAttribute('data-has-suggestions') === 'true';
             
-            document.getElementById('clipSuggestionsModal').classList.remove('hidden');
-            document.getElementById('aiToolsModal').classList.add('hidden');
+            if (hasSuggestions) {
+                // Load existing suggestions
+                await loadAndShowClipSuggestions();
+            } else {
+                // Generate new suggestions
+                await generateClipSuggestions();
+            }
         }
 
         async function checkExistingClipSuggestions() {
@@ -1583,11 +1543,9 @@
                     if (data.success && data.has_suggestions && data.suggestions) {
                         btn.textContent = 'View Clip Suggestions';
                         btn.setAttribute('data-has-suggestions', 'true');
-                        btn.onclick = () => loadAndShowClipSuggestions();
                     } else {
                         btn.textContent = 'Generate Clip Suggestions';
                         btn.setAttribute('data-has-suggestions', 'false');
-                        btn.onclick = () => generateClipSuggestions();
                     }
                 }
             } catch (error) {
@@ -1611,12 +1569,14 @@
                 const data = await response.json();
 
                 if (data.success && data.has_suggestions && data.suggestions) {
-                    // Hide initial view and show suggestions
-                    const initialView = document.querySelector('#clipSuggestionsContent > .text-center');
+                    // Hide selection and show clip suggestions
+                    const aiToolsSelection = document.getElementById('aiToolsSelection');
                     const clipContainer = document.getElementById('clipSuggestionsContainer');
+                    const backBtn = document.getElementById('aiToolsBackBtn');
                     
-                    if (initialView) initialView.classList.add('hidden');
+                    if (aiToolsSelection) aiToolsSelection.classList.add('hidden');
                     if (clipContainer) clipContainer.classList.remove('hidden');
+                    if (backBtn) backBtn.classList.remove('hidden');
                     
                     renderClipSuggestions(data.suggestions);
                 }
@@ -1625,44 +1585,37 @@
             }
         }
 
-        function closeClipSuggestionsModal() {
-            document.getElementById('clipSuggestionsModal').classList.add('hidden');
-            // Reset view
-            const initialView = document.querySelector('#clipSuggestionsContent > .text-center');
-            const container = document.getElementById('clipSuggestionsContainer');
-            if (initialView) initialView.classList.remove('hidden');
-            if (container) container.classList.add('hidden');
-        }
-
-        function backToAITools() {
-            document.getElementById('clipSuggestionsModal').classList.add('hidden');
-            document.getElementById('aiToolsModal').classList.remove('hidden');
-        }
-
         async function generateClipSuggestions() {
             const btn = document.getElementById('generateClipsBtn');
             const regenerateBtn = document.getElementById('regenerateClipsBtn');
             const clipContainer = document.getElementById('clipSuggestionsContainer');
-            const initialView = document.querySelector('#clipSuggestionsContent > .text-center');
+            const aiToolsSelection = document.getElementById('aiToolsSelection');
+            const backBtn = document.getElementById('aiToolsBackBtn');
+            const isRegenerating = regenerateBtn && !regenerateBtn.disabled && clipContainer && !clipContainer.classList.contains('hidden');
 
-            // Disable buttons and show loading state
-            if (btn) {
+            // Show loading state
+            const loadingHTML = `
+                <div class="flex items-center gap-2">
+                    <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Analyzing video...</span>
+                </div>
+            `;
+
+            // Disable and show loading on appropriate button
+            if (isRegenerating && regenerateBtn) {
+                regenerateBtn.disabled = true;
+                regenerateBtn.innerHTML = loadingHTML;
+            } else if (btn) {
                 btn.disabled = true;
                 btn.innerHTML = `
                     <div class="flex flex-col items-center justify-center gap-2">
-                        <div class="flex items-center gap-2">
-                            <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            <span>Analyzing video...</span>
-                        </div>
+                        ${loadingHTML}
                         <span class="text-xs opacity-75">This may take up to 2 minutes</span>
                     </div>
                 `;
-            }
-            if (regenerateBtn) {
-                regenerateBtn.disabled = true;
             }
 
             try {
@@ -1678,9 +1631,10 @@
                 const data = await response.json();
 
                 if (data.success && data.suggestions) {
-                    // Hide initial view and show clip suggestions
-                    if (initialView) initialView.classList.add('hidden');
-                    clipContainer.classList.remove('hidden');
+                    // Hide selection and show clip suggestions
+                    if (aiToolsSelection) aiToolsSelection.classList.add('hidden');
+                    if (clipContainer) clipContainer.classList.remove('hidden');
+                    if (backBtn) backBtn.classList.remove('hidden');
                     
                     // Render clip suggestions
                     renderClipSuggestions(data.suggestions);
@@ -1691,13 +1645,19 @@
                 console.error('Generate error:', error);
                 alert('Network error. Please try again.');
             } finally {
-                // Re-enable buttons
+                // Re-enable buttons and restore text
                 if (btn) {
                     btn.disabled = false;
                     btn.textContent = 'Generate Clip Suggestions';
                 }
                 if (regenerateBtn) {
                     regenerateBtn.disabled = false;
+                    regenerateBtn.innerHTML = `
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        Regenerate
+                    `;
                 }
             }
         }
