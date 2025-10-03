@@ -276,7 +276,7 @@
                     <!-- AI Tools Selection -->
                     <div id="aiToolsSelection" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                         <!-- Social Media Posts Tool -->
-                        <div class="flex flex-col text-center py-6 border border-slate-200 rounded-lg hover:border-purple-300 transition">
+                        <div class="flex flex-col text-center py-6 px-4 border border-slate-200 rounded-lg hover:border-purple-300 transition">
                             <div class="flex-1">
                                 <div class="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-purple-100 to-blue-100 rounded-full mb-3">
                                     <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -286,17 +286,19 @@
                                 <h4 class="text-lg font-semibold text-slate-900 mb-1">Social Media Posts</h4>
                                 <p class="text-sm text-slate-600 max-w-md mx-auto mb-4">Create 5 engaging post suggestions based on your video transcript.</p>
                             </div>
-                            <button 
-                                onclick="handlePostSuggestions()"
-                                id="generatePostsBtn"
-                                class="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition shadow-lg hover:shadow-xl"
-                            >
-                                Generate Posts
-                            </button>
+                            <div class="flex justify-center">
+                                <button 
+                                    onclick="handlePostSuggestions()"
+                                    id="generatePostsBtn"
+                                    class="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition shadow-lg hover:shadow-xl"
+                                >
+                                    Generate Posts
+                                </button>
+                            </div>
                         </div>
                         
                         <!-- Clip Suggestions Tool -->
-                        <div class="flex flex-col text-center py-6 border border-slate-200 rounded-lg hover:border-orange-300 transition">
+                        <div class="flex flex-col text-center py-6 px-4 border border-slate-200 rounded-lg hover:border-orange-300 transition">
                             <div class="flex-1">
                                 <div class="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-orange-100 to-red-100 rounded-full mb-3">
                                     <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -307,12 +309,14 @@
                                 <h4 class="text-lg font-semibold text-slate-900 mb-1">Clip Suggestions</h4>
                                 <p class="text-sm text-slate-600 max-w-md mx-auto mb-4">AI-powered viral clip suggestions with timestamps and titles.</p>
                             </div>
-                            <button 
-                                onclick="openClipSuggestionsModal()"
-                                class="px-6 py-2.5 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg font-medium hover:from-orange-700 hover:to-red-700 transition shadow-lg hover:shadow-xl"
-                            >
-                                Generate Clips
-                            </button>
+                            <div class="flex justify-center">
+                                <button 
+                                    onclick="openClipSuggestionsModal()"
+                                    class="px-6 py-2.5 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg font-medium hover:from-orange-700 hover:to-red-700 transition shadow-lg hover:shadow-xl"
+                                >
+                                    Generate Clips
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div id="postSuggestionsContainer" class="hidden">
