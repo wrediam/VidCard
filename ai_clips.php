@@ -565,7 +565,7 @@ class AIClips {
         error_log("Clip #$clipIndex: Using estimated end position at char {$endPos}");
         
         // Extract the actual text from transcript
-        $extractedLength = $endPos - $startPos;
+        $extractedLength = (int)($endPos - $startPos);
         $extractedText = substr($normalizedTranscript, $startPos, $extractedLength);
         
         // Get the original (non-normalized) text from the transcript
@@ -653,7 +653,7 @@ class AIClips {
         $normalizedFull = $this->normalizeText($originalTranscript);
         
         // Extract the target normalized text
-        $targetNormalized = substr($normalizedFull, $normalizedStartPos, $normalizedLength);
+        $targetNormalized = substr($normalizedFull, (int)$normalizedStartPos, (int)$normalizedLength);
         
         // Get first and last few words to search for
         $targetWords = preg_split('/\s+/', trim($targetNormalized));
@@ -678,7 +678,7 @@ class AIClips {
         
         if ($origPos === false) {
             error_log("Could not find original text position, using approximation");
-            return substr($originalTranscript, $normalizedStartPos, $normalizedLength);
+            return substr($originalTranscript, (int)$normalizedStartPos, (int)$normalizedLength);
         }
         
         // Extract approximately the same length from original
