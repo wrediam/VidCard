@@ -485,19 +485,25 @@ class AIClips {
         $endWords = array_slice($aiWords, -min(10, $wordCount));
         
         // Try to find start position using beginning words
+        error_log("Clip #$clipIndex: Searching for start words: " . implode(' ', array_slice($startWords, 0, 5)) . "...");
         $startPos = $this->findFlexibleMatch($startWords, $normalizedTranscript);
         
         if ($startPos === false) {
             error_log("Clip #$clipIndex: Could not find start of quotation in transcript");
+            error_log("Clip #$clipIndex: First 200 chars of AI quote: " . substr($normalizedAI, 0, 200));
             return null;
         }
         
+        error_log("Clip #$clipIndex: Found start position at char {$startPos}");
+        
         // Verify the match by checking if middle words appear after start
         $middleSearchStart = $startPos + (strlen($normalizedAI) * 0.3); // Look 30% into expected quote
+        error_log("Clip #$clipIndex: Searching for middle words: " . implode(' ', array_slice($middleWords, 0, 5)) . "...");
         $middlePos = $this->findFlexibleMatch($middleWords, $normalizedTranscript, (int)$middleSearchStart);
         
         if ($middlePos === false || $middlePos > $startPos + strlen($normalizedAI) * 2) {
-            error_log("Clip #$clipIndex: Middle words not found in expected range, likely wrong match");
+            error_log("Clip #$clipIndex: Middle words not found in expected range (middlePos=" . ($middlePos === false ? 'false' : $middlePos) . ", maxExpected=" . ($startPos + strlen($normalizedAI) * 2) . ")");
+            error_log("Clip #$clipIndex: Text at start position: " . substr($normalizedTranscript, $startPos, 150));
             return null;
         }
         
@@ -554,20 +560,31 @@ class AIClips {
         $textWords = preg_split('/\s+/', substr($text, $startOffset));
         $textWords = array_filter($textWords);
         
-        $minMatchRatio = 0.7; // At least 70% of search words must match
-        $requiredMatches = max(3, (int)ceil(count($searchWords) * $minMatchRatio));
+        $minMatchRatio = 0.8; // At least 80% of search words must match (stricter)
+        $requiredMatches = max(4, (int)ceil(count($searchWords) * $minMatchRatio)); // At least 4 words
         
         // Sliding window search
         for ($i = 0; $i < count($textWords) - count($searchWords) + 1; $i++) {
             $matchCount = 0;
+            $matchedIndices = []; // Track which window words were matched
             $windowWords = array_slice($textWords, $i, count($searchWords) * 2); // Look in wider window
             
+            // Check if search words appear IN ORDER (with some flexibility)
+            $lastMatchedIndex = -1;
             foreach ($searchWords as $searchWord) {
-                foreach ($windowWords as $windowWord) {
-                    if ($this->wordsMatch($searchWord, $windowWord)) {
+                $foundInWindow = false;
+                for ($w = $lastMatchedIndex + 1; $w < count($windowWords); $w++) {
+                    if ($this->wordsMatch($searchWord, $windowWords[$w])) {
                         $matchCount++;
+                        $lastMatchedIndex = $w;
+                        $foundInWindow = true;
                         break; // Found this search word, move to next
                     }
+                }
+                
+                // If we can't find a word and we're past the minimum matches, break
+                if (!$foundInWindow && $matchCount < $requiredMatches) {
+                    break;
                 }
             }
             
