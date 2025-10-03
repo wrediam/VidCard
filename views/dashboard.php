@@ -253,7 +253,7 @@
         <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8">
             <div class="sticky top-0 bg-gradient-to-r from-purple-600 to-blue-600 border-b border-purple-700 p-6 flex items-center justify-between rounded-t-lg z-10">
                 <div class="flex items-center gap-3">
-                    <button onclick="backToTranscript()" class="text-white hover:text-purple-100 transition">
+                    <button id="aiToolsBackBtn" onclick="backToAIToolsSelection()" class="text-white hover:text-purple-100 transition hidden">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                         </svg>
@@ -276,8 +276,8 @@
                     <!-- AI Tools Selection -->
                     <div id="aiToolsSelection" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                         <!-- Social Media Posts Tool -->
-                        <div class="text-center py-6 border border-slate-200 rounded-lg hover:border-purple-300 transition">
-                            <div class="mb-4">
+                        <div class="flex flex-col text-center py-6 border border-slate-200 rounded-lg hover:border-purple-300 transition">
+                            <div class="flex-1">
                                 <div class="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-purple-100 to-blue-100 rounded-full mb-3">
                                     <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
@@ -287,7 +287,7 @@
                                 <p class="text-sm text-slate-600 max-w-md mx-auto mb-4">Create 5 engaging post suggestions based on your video transcript.</p>
                             </div>
                             <button 
-                                onclick="generatePostSuggestions()"
+                                onclick="handlePostSuggestions()"
                                 id="generatePostsBtn"
                                 class="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition shadow-lg hover:shadow-xl"
                             >
@@ -296,8 +296,8 @@
                         </div>
                         
                         <!-- Clip Suggestions Tool -->
-                        <div class="text-center py-6 border border-slate-200 rounded-lg hover:border-orange-300 transition">
-                            <div class="mb-4">
+                        <div class="flex flex-col text-center py-6 border border-slate-200 rounded-lg hover:border-orange-300 transition">
+                            <div class="flex-1">
                                 <div class="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-orange-100 to-red-100 rounded-full mb-3">
                                     <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
@@ -1194,11 +1194,101 @@
             // Reset to selection view
             const aiToolsSelection = document.getElementById('aiToolsSelection');
             const postContainer = document.getElementById('postSuggestionsContainer');
+            const backBtn = document.getElementById('aiToolsBackBtn');
             if (aiToolsSelection) aiToolsSelection.classList.remove('hidden');
             if (postContainer) postContainer.classList.add('hidden');
+            if (backBtn) backBtn.classList.add('hidden');
+            
+            // Check for existing post suggestions and update button
+            await checkExistingPostSuggestions();
             
             // Open AI Tools modal directly
             document.getElementById('aiToolsModal').classList.remove('hidden');
+        }
+
+        async function checkExistingPostSuggestions() {
+            if (!currentVideoId) return;
+
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        action: 'get_post_suggestions',
+                        video_id: currentVideoId 
+                    })
+                });
+
+                const data = await response.json();
+                const btn = document.getElementById('generatePostsBtn');
+                
+                if (btn) {
+                    if (data.success && data.has_suggestions && data.suggestions) {
+                        btn.textContent = 'View Post Suggestions';
+                        btn.setAttribute('data-has-suggestions', 'true');
+                    } else {
+                        btn.textContent = 'Generate Posts';
+                        btn.setAttribute('data-has-suggestions', 'false');
+                    }
+                }
+            } catch (error) {
+                console.error('Check suggestions error:', error);
+            }
+        }
+
+        async function handlePostSuggestions() {
+            const btn = document.getElementById('generatePostsBtn');
+            const hasSuggestions = btn?.getAttribute('data-has-suggestions') === 'true';
+            
+            if (hasSuggestions) {
+                // Load existing suggestions
+                await loadAndShowPostSuggestions();
+            } else {
+                // Generate new suggestions
+                await generatePostSuggestions();
+            }
+        }
+
+        async function loadAndShowPostSuggestions() {
+            if (!currentVideoId) return;
+
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        action: 'get_post_suggestions',
+                        video_id: currentVideoId 
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.has_suggestions && data.suggestions) {
+                    // Hide selection and show suggestions
+                    const aiToolsSelection = document.getElementById('aiToolsSelection');
+                    const suggestionsContainer = document.getElementById('postSuggestionsContainer');
+                    const backBtn = document.getElementById('aiToolsBackBtn');
+                    
+                    if (aiToolsSelection) aiToolsSelection.classList.add('hidden');
+                    if (suggestionsContainer) suggestionsContainer.classList.remove('hidden');
+                    if (backBtn) backBtn.classList.remove('hidden');
+                    
+                    renderPostSuggestions(data.suggestions);
+                }
+            } catch (error) {
+                console.error('Load suggestions error:', error);
+            }
+        }
+
+        function backToAIToolsSelection() {
+            const aiToolsSelection = document.getElementById('aiToolsSelection');
+            const postContainer = document.getElementById('postSuggestionsContainer');
+            const backBtn = document.getElementById('aiToolsBackBtn');
+            
+            if (aiToolsSelection) aiToolsSelection.classList.remove('hidden');
+            if (postContainer) postContainer.classList.add('hidden');
+            if (backBtn) backBtn.classList.add('hidden');
         }
 
         async function openAITools() {
@@ -1308,7 +1398,9 @@
 
                 if (data.success && data.suggestions) {
                     // Hide other views and show post suggestions
+                    const backBtn = document.getElementById('aiToolsBackBtn');
                     if (aiToolsSelection) aiToolsSelection.classList.add('hidden');
+                    if (backBtn) backBtn.classList.remove('hidden');
                     suggestionsContainer.classList.remove('hidden');
                     
                     // Render suggestions
