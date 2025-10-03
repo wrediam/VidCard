@@ -604,48 +604,47 @@ class AIClips {
     
     /**
      * Extract original text (with proper case/punctuation) from transcript
+     * Uses a more reliable word-based approach instead of character mapping
      */
     private function extractOriginalText($originalTranscript, $normalizedStartPos, $normalizedLength) {
-        // This is an approximation since normalized text has different length
-        // We need to map normalized position back to original
+        // Get the normalized version to work with
+        $normalizedFull = $this->normalizeText($originalTranscript);
         
-        $normalized = $this->normalizeText($originalTranscript);
+        // Extract the target normalized text
+        $targetNormalized = substr($normalizedFull, $normalizedStartPos, $normalizedLength);
         
-        // Find the actual start position in original text
-        $currentNormPos = 0;
-        $currentOrigPos = 0;
-        $origLength = strlen($originalTranscript);
+        // Get first and last few words to search for
+        $targetWords = preg_split('/\s+/', trim($targetNormalized));
+        $targetWords = array_filter($targetWords);
         
-        // Map normalized start position to original position
-        while ($currentNormPos < $normalizedStartPos && $currentOrigPos < $origLength) {
-            $origChar = $originalTranscript[$currentOrigPos];
-            $normChar = $this->normalizeText($origChar);
-            
-            if (!empty($normChar)) {
-                $currentNormPos++;
-            }
-            $currentOrigPos++;
+        if (count($targetWords) < 3) {
+            // Too short, fallback to simple extraction
+            return substr($originalTranscript, $normalizedStartPos, $normalizedLength);
         }
         
-        $startPos = $currentOrigPos;
+        // Create search phrase from first 5 words
+        $searchStart = implode(' ', array_slice($targetWords, 0, min(5, count($targetWords))));
         
-        // Map normalized length to original length
-        $currentNormPos = 0;
-        $currentOrigPos = $startPos;
+        // Find in original (case-insensitive)
+        $origPos = stripos($originalTranscript, $searchStart);
         
-        while ($currentNormPos < $normalizedLength && $currentOrigPos < $origLength) {
-            $origChar = $originalTranscript[$currentOrigPos];
-            $normChar = $this->normalizeText($origChar);
-            
-            if (!empty($normChar)) {
-                $currentNormPos++;
-            }
-            $currentOrigPos++;
+        if ($origPos === false) {
+            // Fallback: try with fewer words
+            $searchStart = implode(' ', array_slice($targetWords, 0, min(3, count($targetWords))));
+            $origPos = stripos($originalTranscript, $searchStart);
         }
         
-        $length = $currentOrigPos - $startPos;
+        if ($origPos === false) {
+            error_log("Could not find original text position, using approximation");
+            return substr($originalTranscript, $normalizedStartPos, $normalizedLength);
+        }
         
-        return substr($originalTranscript, $startPos, $length);
+        // Extract approximately the same length from original
+        // Add 20% buffer for punctuation/whitespace differences
+        $estimatedLength = (int)($normalizedLength * 1.2);
+        $extracted = substr($originalTranscript, $origPos, $estimatedLength);
+        
+        return $extracted;
     }
     
     /**
