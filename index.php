@@ -870,6 +870,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
         
+        // Route: Get clip edits (requires auth)
+        if (isset($input['action']) && $input['action'] === 'get_clip_edits') {
+            if (!$currentUser) {
+                http_response_code(401);
+                echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+                exit;
+            }
+            
+            $videoId = $input['video_id'] ?? '';
+            if (!$videoId) {
+                throw new Exception('Video ID required');
+            }
+            
+            // Verify video belongs to user
+            $videoService = new Video();
+            $video = $videoService->getVideoByVideoId($videoId);
+            
+            if (!$video || $video['user_id'] != $currentUser['id']) {
+                throw new Exception('Video not found or access denied');
+            }
+            
+            // Get saved clip edits
+            $db = getDB();
+            $stmt = $db->prepare('
+                SELECT clip_index, original_start_time, original_end_time, 
+                       edited_start_time, edited_end_time, updated_at
+                FROM ai_clip_edits 
+                WHERE video_id = :video_id AND user_id = :user_id
+                ORDER BY clip_index
+            ');
+            
+            $stmt->execute([
+                'video_id' => $videoId,
+                'user_id' => $currentUser['id']
+            ]);
+            
+            $edits = $stmt->fetchAll();
+            
+            echo json_encode([
+                'success' => true,
+                'edits' => $edits
+            ]);
+            exit;
+        }
+        
         throw new Exception('Invalid action');
         
     } catch (Exception $e) {

@@ -445,7 +445,7 @@
                                                     >
                                                         <div class="w-0.5 h-6 bg-white opacity-70 group-hover:opacity-100"></div>
                                                         <!-- Start tag -->
-                                                        <div class="absolute -left-14 top-1/2 -translate-y-1/2 px-2 py-1 bg-orange-600 text-white text-xs font-semibold rounded-l-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                                        <div class="absolute -left-14 top-1/2 -translate-y-1/2 px-2 py-1 bg-orange-600 text-white text-xs font-semibold rounded-l-md whitespace-nowrap shadow-md">
                                                             Start <span class="ml-0.5">▶</span>
                                                         </div>
                                                     </div>
@@ -458,7 +458,7 @@
                                                     >
                                                         <div class="w-0.5 h-6 bg-white opacity-70 group-hover:opacity-100"></div>
                                                         <!-- End tag -->
-                                                        <div class="absolute -right-12 top-1/2 -translate-y-1/2 px-2 py-1 bg-red-600 text-white text-xs font-semibold rounded-r-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                                        <div class="absolute -right-12 top-1/2 -translate-y-1/2 px-2 py-1 bg-red-600 text-white text-xs font-semibold rounded-r-md whitespace-nowrap shadow-md">
                                                             <span class="mr-0.5">◀</span> End
                                                         </div>
                                                     </div>
@@ -473,17 +473,30 @@
                                         </div>
                                     </div>
                                     
-                                    <!-- Download Button -->
-                                    <button 
-                                        onclick="downloadClip()"
-                                        id="downloadClipBtn"
-                                        class="w-full px-4 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-medium hover:from-green-700 hover:to-emerald-700 transition shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-                                    >
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                                        </svg>
-                                        Download Clip
-                                    </button>
+                                    <!-- Action Buttons -->
+                                    <div class="flex gap-2">
+                                        <button 
+                                            onclick="resetToAISuggestion()"
+                                            id="resetClipBtn"
+                                            class="px-4 py-2.5 bg-slate-200 text-slate-700 rounded-lg font-medium hover:bg-slate-300 transition flex items-center justify-center gap-2"
+                                            title="Reset to AI suggestion"
+                                        >
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                            </svg>
+                                            Reset
+                                        </button>
+                                        <button 
+                                            onclick="downloadClip()"
+                                            id="downloadClipBtn"
+                                            class="flex-1 px-4 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-medium hover:from-green-700 hover:to-emerald-700 transition shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                                        >
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                                            </svg>
+                                            Download Clip
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1673,6 +1686,8 @@
         let videoDuration = 0; // Total video duration in seconds
         let clipStartTime = 0; // Current clip start in seconds
         let clipEndTime = 0;   // Current clip end in seconds
+        let originalClipStart = 0; // Original AI suggestion start
+        let originalClipEnd = 0;   // Original AI suggestion end
         let isDragging = false;
         let dragType = null; // 'start' or 'end'
 
@@ -1736,6 +1751,9 @@
                 const data = await response.json();
 
                 if (data.success && data.has_suggestions && data.suggestions) {
+                    // Load any saved edits
+                    await loadSavedClipEdits(currentVideoId, data.suggestions);
+                    
                     // Hide selection and show clip suggestions
                     const aiToolsSelection = document.getElementById('aiToolsSelection');
                     const clipContainer = document.getElementById('clipSuggestionsContainer');
@@ -1749,6 +1767,34 @@
                 }
             } catch (error) {
                 console.error('Load clip suggestions error:', error);
+            }
+        }
+
+        async function loadSavedClipEdits(videoId, suggestions) {
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        action: 'get_clip_edits',
+                        video_id: videoId 
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success && data.edits) {
+                    // Apply saved edits to suggestions
+                    data.edits.forEach(edit => {
+                        if (suggestions[edit.clip_index]) {
+                            suggestions[edit.clip_index].start_time = edit.edited_start_time;
+                            suggestions[edit.clip_index].end_time = edit.edited_end_time;
+                            suggestions[edit.clip_index].was_edited = true;
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading saved edits:', error);
             }
         }
 
@@ -1872,6 +1918,8 @@
             // Set global clip times
             clipStartTime = startSeconds;
             clipEndTime = endSeconds;
+            originalClipStart = startSeconds;
+            originalClipEnd = endSeconds;
             
             // Set video duration to allow full timeline adjustment
             // Allow up to 6 minutes (360 seconds) for clip selection
@@ -1957,6 +2005,14 @@
             const clipSegment = document.getElementById('clipSegment');
             clipSegment.style.left = `${startPercent}%`;
             clipSegment.style.width = `${widthPercent}%`;
+            
+            // Update reset button visibility
+            const resetBtn = document.getElementById('resetClipBtn');
+            const hasChanges = clipStartTime !== originalClipStart || clipEndTime !== originalClipEnd;
+            if (resetBtn) {
+                resetBtn.style.opacity = hasChanges ? '1' : '0.5';
+                resetBtn.disabled = !hasChanges;
+            }
         }
 
         function setupTimelineDragHandlers() {
@@ -2013,7 +2069,7 @@
                     // Update embed with new times
                     updateClipEmbed();
                     
-                    // Save edit to backend
+                    // Auto-save edit to backend
                     saveClipEdit();
                 }
             });
@@ -2078,12 +2134,30 @@
                 });
                 
                 const data = await response.json();
-                if (!data.success) {
+                if (data.success) {
+                    console.log('✓ Clip edit saved automatically');
+                } else {
                     console.error('Failed to save clip edit:', data.error);
                 }
             } catch (error) {
                 console.error('Error saving clip edit:', error);
             }
+        }
+
+        function resetToAISuggestion() {
+            // Reset to original AI suggestion
+            clipStartTime = originalClipStart;
+            clipEndTime = originalClipEnd;
+            
+            // Update all UI elements
+            updateTimelineUI();
+            updateTimeLabels();
+            updateClipEmbed();
+            
+            // Save the reset to backend (removes custom edit)
+            saveClipEdit();
+            
+            showToast('Reset to AI suggestion', 'info');
         }
 
         async function downloadClip() {
