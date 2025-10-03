@@ -4,8 +4,24 @@ require_once 'auth.php';
 
 header('Content-Type: application/json');
 
-// Require authentication
-$currentUser = requireAuth();
+// Check authentication
+$auth = new Auth();
+$currentUser = null;
+if (isset($_COOKIE['session_token'])) {
+    $session = $auth->validateSession($_COOKIE['session_token']);
+    if ($session) {
+        $currentUser = [
+            'id' => $session['user_id'],
+            'email' => $session['email']
+        ];
+    }
+}
+
+if (!$currentUser) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
