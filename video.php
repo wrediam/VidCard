@@ -35,6 +35,14 @@ class Video {
     }
     
     /**
+     * Parse ISO 8601 duration format (e.g., PT4M13S) to seconds
+     */
+    private function parseISO8601Duration($duration) {
+        $interval = new DateInterval($duration);
+        return ($interval->h * 3600) + ($interval->i * 60) + $interval->s;
+    }
+    
+    /**
      * Fetch video metadata from YouTube API
      */
     public function fetchVideoData($videoId) {
@@ -43,7 +51,8 @@ class Video {
             throw new Exception('YouTube API key not configured. Please set YOUTUBE_API_KEY in environment variables.');
         }
         
-        $apiUrl = "https://www.googleapis.com/youtube/v3/videos?id=" . $videoId . "&key=" . $apiKey . "&part=snippet";
+        // Request both snippet and contentDetails to get duration
+        $apiUrl = "https://www.googleapis.com/youtube/v3/videos?id=" . $videoId . "&key=" . $apiKey . "&part=snippet,contentDetails";
         
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $apiUrl);
@@ -79,6 +88,13 @@ class Video {
         }
         
         $videoData = $data['items'][0]['snippet'];
+        $contentDetails = $data['items'][0]['contentDetails'] ?? null;
+        
+        // Extract duration from contentDetails (ISO 8601 format like PT4M13S)
+        $duration = null;
+        if ($contentDetails && isset($contentDetails['duration'])) {
+            $duration = $this->parseISO8601Duration($contentDetails['duration']);
+        }
         
         // Fetch channel details including handle
         $channelId = $videoData['channelId'];
@@ -103,16 +119,21 @@ class Video {
             $channelHandle = '@' . str_replace(' ', '', $videoData['channelTitle']);
         }
         
+        // Get thumbnail URL
+        $thumbnails = $videoData['thumbnails'];
+        $thumbnailUrl = $thumbnails['maxres']['url'] ?? $thumbnails['high']['url'] ?? $thumbnails['medium']['url'] ?? '';
+        
         return [
             'video_id' => $videoId,
             'title' => $videoData['title'],
             'description' => $videoData['description'],
-            'thumbnail_url' => $videoData['thumbnails']['maxres']['url'] ?? $videoData['thumbnails']['high']['url'] ?? $videoData['thumbnails']['default']['url'],
+            'thumbnail_url' => $thumbnailUrl,
             'channel_name' => $videoData['channelTitle'],
-            'channel_url' => "https://www.youtube.com/channel/" . $channelId,
-            'channel_thumbnail' => $channelThumbnail,
+            'channel_url' => 'https://www.youtube.com/channel/' . $channelId,
+            'channel_thumbnail' => $channelThumbnails[0]['url'] ?? '',
             'channel_handle' => $channelHandle,
-            'youtube_url' => "https://www.youtube.com/watch?v=" . $videoId
+            'youtube_url' => 'https://www.youtube.com/watch?v=' . $videoId,
+            'duration' => $duration
         ];
     }
     
@@ -135,8 +156,8 @@ class Video {
         
         // Insert new video
         $stmt = $this->db->prepare(
-            'INSERT INTO videos (user_id, video_id, title, description, thumbnail_url, channel_name, channel_url, channel_thumbnail, channel_handle, youtube_url) 
-             VALUES (:user_id, :video_id, :title, :description, :thumbnail_url, :channel_name, :channel_url, :channel_thumbnail, :channel_handle, :youtube_url)'
+            'INSERT INTO videos (user_id, video_id, title, description, thumbnail_url, channel_name, channel_url, channel_thumbnail, channel_handle, youtube_url, duration) 
+             VALUES (:user_id, :video_id, :title, :description, :thumbnail_url, :channel_name, :channel_url, :channel_thumbnail, :channel_handle, :youtube_url, :duration)'
         );
         
         $result = $stmt->execute([
@@ -149,7 +170,8 @@ class Video {
             'channel_url' => $videoData['channel_url'],
             'channel_thumbnail' => $videoData['channel_thumbnail'],
             'channel_handle' => $videoData['channel_handle'] ?? '',
-            'youtube_url' => $videoData['youtube_url']
+            'youtube_url' => $videoData['youtube_url'],
+            'duration' => $videoData['duration'] ?? null
         ]);
         
         // Try to fetch transcript asynchronously (don't block on failure)

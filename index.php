@@ -110,6 +110,24 @@ try {
         error_log('Clip edits migration check: ' . $e->getMessage());
     }
     
+    // Run video duration migration if needed
+    try {
+        $result = $db->query("
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'videos' AND column_name = 'duration'
+        ");
+        $durationColumnExists = $result->fetchColumn();
+        
+        if (!$durationColumnExists) {
+            $sql = file_get_contents(__DIR__ . '/video_duration_migration.sql');
+            $db->exec($sql);
+            error_log('Video duration column added automatically');
+        }
+    } catch (Exception $e) {
+        error_log('Video duration migration check: ' . $e->getMessage());
+    }
+    
     // Auto-backfill channel handles for existing videos (runs once per session)
     if (!isset($_SESSION['handles_backfilled'])) {
         $stmt = $db->query("SELECT COUNT(*) FROM videos WHERE channel_handle IS NULL OR channel_handle = ''");
@@ -165,6 +183,57 @@ try {
             }
         }
         $_SESSION['handles_backfilled'] = true;
+    }
+    
+    // Auto-backfill video durations for existing videos (runs once per session)
+    if (!isset($_SESSION['durations_backfilled'])) {
+        $stmt = $db->query("SELECT COUNT(*) FROM videos WHERE duration IS NULL");
+        $missingDurations = $stmt->fetchColumn();
+        
+        if ($missingDurations > 0 && $missingDurations <= 10) {
+            // Only auto-backfill if 10 or fewer videos (to avoid long delays)
+            error_log("Auto-backfilling {$missingDurations} video durations...");
+            
+            $stmt = $db->query("SELECT * FROM videos WHERE duration IS NULL LIMIT 10");
+            $videos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            foreach ($videos as $video) {
+                try {
+                    $apiKey = YOUTUBE_API_KEY;
+                    if (!$apiKey || $apiKey === 'your_youtube_api_key_here') continue;
+                    
+                    $apiUrl = "https://www.googleapis.com/youtube/v3/videos?id=" . $video['video_id'] . "&key=" . $apiKey . "&part=contentDetails";
+                    $ch = curl_init();
+                    curl_setopt($ch, CURLOPT_URL, $apiUrl);
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+                    
+                    $response = curl_exec($ch);
+                    $data = json_decode($response, true);
+                    curl_close($ch);
+                    
+                    if (!empty($data['items']) && isset($data['items'][0]['contentDetails']['duration'])) {
+                        $isoDuration = $data['items'][0]['contentDetails']['duration'];
+                        
+                        // Parse ISO 8601 duration (e.g., PT4M13S)
+                        try {
+                            $interval = new DateInterval($isoDuration);
+                            $duration = ($interval->h * 3600) + ($interval->i * 60) + $interval->s;
+                            
+                            $updateStmt = $db->prepare('UPDATE videos SET duration = :duration WHERE id = :id');
+                            $updateStmt->execute(['duration' => $duration, 'id' => $video['id']]);
+                            error_log("Backfilled duration for video: {$video['video_id']} -> {$duration}s");
+                        } catch (Exception $e) {
+                            error_log("Failed to parse duration for video {$video['video_id']}: " . $e->getMessage());
+                        }
+                    }
+                } catch (Exception $e) {
+                    error_log("Failed to backfill duration for video {$video['video_id']}: " . $e->getMessage());
+                }
+            }
+        }
+        $_SESSION['durations_backfilled'] = true;
     }
 } catch (Exception $e) {
     error_log('Auto-migration check failed: ' . $e->getMessage());

@@ -1900,19 +1900,24 @@
             // Get current video data
             getCurrentVideoData();
             
-            // Estimate video duration from clips (find the latest end time)
-            let maxEndTime = 0;
-            clips.forEach(clip => {
-                if (clip.end_time > maxEndTime) {
-                    maxEndTime = clip.end_time;
+            // Use actual video duration from database if available
+            if (currentVideoData && currentVideoData.duration) {
+                videoDuration = parseInt(currentVideoData.duration);
+                console.log(`Using actual video duration from database: ${videoDuration}s (${Math.floor(videoDuration/60)}:${(videoDuration%60).toString().padStart(2,'0')})`);
+            } else {
+                // Fallback: Estimate from clips (find the latest end time)
+                let maxEndTime = 0;
+                clips.forEach(clip => {
+                    if (clip.end_time > maxEndTime) {
+                        maxEndTime = clip.end_time;
+                    }
+                });
+                
+                // Use the latest clip end time + buffer, but ensure at least 6 minutes for adjustment
+                if (maxEndTime > 0) {
+                    videoDuration = Math.max(maxEndTime + 120, 360); // Latest clip + 2 min buffer, min 6 min
+                    console.log(`Estimated video duration from clips: ${videoDuration}s (${Math.floor(videoDuration/60)}:${(videoDuration%60).toString().padStart(2,'0')})`);
                 }
-            });
-            
-            // Set a reasonable video duration estimate
-            // Use the latest clip end time + buffer, but ensure at least 6 minutes for adjustment
-            if (maxEndTime > 0) {
-                videoDuration = Math.max(maxEndTime + 120, 360); // Latest clip + 2 min buffer, min 6 min
-                console.log(`Estimated video duration from clips: ${videoDuration}s (${Math.floor(videoDuration/60)}:${(videoDuration%60).toString().padStart(2,'0')})`);
             }
             
             // Show the first clip
