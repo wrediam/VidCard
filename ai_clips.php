@@ -146,8 +146,8 @@ class AIClips {
                             'ai_original_quote' => $quotation, // Keep original for reference
                             'was_corrected' => $verifiedQuotation['was_corrected'],
                             'similarity_score' => $verifiedQuotation['similarity_score'],
-                            'start_time_ms' => $timestamps['start_time_ms'],
-                            'end_time_ms' => $timestamps['end_time_ms'],
+                            'start_time' => $startSec,  // Seconds for frontend
+                            'end_time' => $endSec,      // Seconds for frontend
                             'suggested_title' => $suggestion['suggested_title'] ?? 'Clip ' . (count($processedSuggestions) + 1),
                             'reason' => $suggestion['reason'] ?? 'AI-selected clip',
                             'match_confidence' => $timestamps['confidence'] ?? 1.0
@@ -657,11 +657,27 @@ class AIClips {
         
         error_log("Clip #$clipIndex: Mapped to position {$originalStartPos} in original text");
         
-        // Estimate length in original text (add buffer for punctuation/newlines)
-        $estimatedLength = (int)(strlen($normalizedAI) * 1.3); // 30% buffer for formatting
+        // Extract a larger chunk from original text for processing
+        $bufferLength = (int)(strlen($normalizedAI) * 1.5); // 50% buffer
+        $extractedChunk = substr($transcriptText, $originalStartPos, $bufferLength);
         
-        // Extract from original text
-        $correctedText = substr($transcriptText, $originalStartPos, $estimatedLength);
+        // Find where the AI quote actually starts in the extracted chunk
+        $aiFirstWords = implode(' ', array_slice(preg_split('/\s+/', $normalizedAI), 0, 5));
+        $normalizedChunk = $this->normalizeText($extractedChunk);
+        $actualStart = strpos($normalizedChunk, $aiFirstWords);
+        
+        if ($actualStart !== false && $actualStart > 0) {
+            // Trim off the extra text before the actual quote
+            $trimPosition = $this->mapNormalizedToOriginalPosition($extractedChunk, $actualStart);
+            $correctedText = substr($extractedChunk, $trimPosition);
+            error_log("Clip #$clipIndex: Trimmed {$trimPosition} chars from start of extracted text");
+        } else {
+            $correctedText = $extractedChunk;
+        }
+        
+        // Trim to approximate length
+        $estimatedLength = (int)(strlen($normalizedAI) * 1.3);
+        $correctedText = substr($correctedText, 0, $estimatedLength);
         
         // Also extract from normalized for similarity check
         $normalizedExtractedLength = (int)(strlen($normalizedAI) * 1.1);
