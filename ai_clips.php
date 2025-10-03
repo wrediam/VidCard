@@ -28,11 +28,16 @@ class AIClips {
         }
         
         try {
+            // Intelligently chunk transcript if too long
+            $textToSend = $this->prepareTranscriptForAI($transcriptText);
+            
+            error_log("Sending transcript to n8n: " . strlen($textToSend) . " characters (original: " . strlen($transcriptText) . " chars)");
+            
             // Send clean transcript text to n8n webhook (not timestamped version)
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $this->webhookUrl);
             curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $transcriptText);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $textToSend);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 120); // Increased to 120 seconds for AI processing
             curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
@@ -159,6 +164,139 @@ class AIClips {
             error_log('AI clip generation error: ' . $e->getMessage());
             throw $e;
         }
+    }
+    
+    /**
+     * Prepare transcript for AI processing - chunk if too long
+     * Returns a single string (either full transcript or a strategic chunk)
+     */
+    private function prepareTranscriptForAI($transcriptText) {
+        $maxChars = 50000; // ~12,500 tokens for most LLMs (safe limit)
+        $minChars = 15000; // Minimum chunk size to ensure context
+        
+        $textLength = strlen($transcriptText);
+        
+        // If transcript is short enough, send it all
+        if ($textLength <= $maxChars) {
+            error_log("Transcript is {$textLength} chars, sending full transcript");
+            return $transcriptText;
+        }
+        
+        error_log("Transcript is {$textLength} chars, selecting strategic chunk");
+        
+        // For long transcripts, select a strategic middle chunk
+        // This avoids intro/outro and gets the main content
+        
+        // Calculate chunk boundaries
+        $chunkSize = $maxChars;
+        
+        // Start from 20% into the transcript (skip intro)
+        $startOffset = (int)($textLength * 0.2);
+        
+        // Don't go past 80% (skip outro)
+        $maxEndOffset = (int)($textLength * 0.8);
+        
+        // Try multiple candidate chunks and pick the best one (least music/noise)
+        $bestChunk = null;
+        $bestScore = -1;
+        $attempts = 3; // Try 3 different positions
+        
+        for ($attempt = 0; $attempt < $attempts; $attempt++) {
+            // Vary the start position for each attempt
+            $attemptStart = $startOffset + (int)(($maxEndOffset - $startOffset - $chunkSize) * ($attempt / $attempts));
+            $attemptEnd = min($attemptStart + $chunkSize, $maxEndOffset);
+            
+            $candidateChunk = substr($transcriptText, $attemptStart, $attemptEnd - $attemptStart);
+            
+            // Score this chunk (higher is better)
+            $score = $this->scoreChunkQuality($candidateChunk);
+            
+            error_log("Chunk attempt #$attempt: score={$score}, start=" . round(($attemptStart/$textLength)*100) . "%");
+            
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $bestChunk = $candidateChunk;
+                $startOffset = $attemptStart;
+            }
+        }
+        
+        $chunk = $bestChunk;
+        
+        // Adjust to not cut mid-sentence - find nearest sentence boundary
+        // Try to start at a sentence boundary (look for period + space + capital letter)
+        if (preg_match('/\.\s+[A-Z]/', $chunk, $matches, PREG_OFFSET_CAPTURE)) {
+            $firstSentenceStart = $matches[0][1] + 2; // +2 to skip ". "
+            $chunk = substr($chunk, $firstSentenceStart);
+            $startOffset += $firstSentenceStart;
+        }
+        
+        // Try to end at a sentence boundary
+        if (preg_match('/\.\s+[A-Z]/', strrev($chunk), $matches, PREG_OFFSET_CAPTURE)) {
+            $lastSentenceEnd = strlen($chunk) - $matches[0][1];
+            $chunk = substr($chunk, 0, $lastSentenceEnd);
+        }
+        
+        // Ensure we still have a decent chunk
+        if (strlen($chunk) < $minChars && $textLength > $minChars) {
+            // Fallback: just take first $maxChars
+            error_log("Chunk too small after boundary adjustment, using first {$maxChars} chars");
+            return substr($transcriptText, 0, $maxChars);
+        }
+        
+        $chunkLength = strlen($chunk);
+        $startPercent = round(($startOffset / $textLength) * 100);
+        $endPercent = round((($startOffset + $chunkLength) / $textLength) * 100);
+        
+        error_log("Selected chunk: {$chunkLength} chars from {$startPercent}% to {$endPercent}% of transcript (quality score: {$bestScore})");
+        
+        return $chunk;
+    }
+    
+    /**
+     * Score a chunk's quality for AI processing
+     * Higher score = better chunk (more speech, less music/noise)
+     */
+    private function scoreChunkQuality($chunk) {
+        $score = 100; // Start with perfect score
+        
+        // Penalize for music and sound effects markers
+        $musicPatterns = [
+            '/\[Music\]/i',
+            '/\[Applause\]/i',
+            '/\[Laughter\]/i',
+            '/\[Singing\]/i',
+            '/\[Instrumental\]/i',
+            '/\[Background music\]/i',
+            '/\[Sound effects\]/i',
+            '/\[Noise\]/i'
+        ];
+        
+        foreach ($musicPatterns as $pattern) {
+            $matches = preg_match_all($pattern, $chunk);
+            $score -= ($matches * 5); // -5 points per occurrence
+        }
+        
+        // Penalize for excessive repetition (often indicates music lyrics)
+        $words = str_word_count(strtolower($chunk), 1);
+        if (count($words) > 0) {
+            $uniqueWords = count(array_unique($words));
+            $repetitionRatio = $uniqueWords / count($words);
+            
+            // If less than 40% unique words, likely repetitive content (lyrics)
+            if ($repetitionRatio < 0.4) {
+                $score -= 20;
+            }
+        }
+        
+        // Reward for sentence structure (indicates speech)
+        $sentences = preg_match_all('/[.!?]\s+[A-Z]/', $chunk);
+        $score += min($sentences * 2, 20); // +2 per sentence, max +20
+        
+        // Reward for question marks (indicates dialogue/teaching)
+        $questions = substr_count($chunk, '?');
+        $score += min($questions * 3, 15); // +3 per question, max +15
+        
+        return $score;
     }
     
     /**
