@@ -721,10 +721,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception('Transcript not available for this video');
             }
             
+            if (empty($transcript['transcript_raw'])) {
+                throw new Exception('Transcript raw data not available for timestamp extraction');
+            }
+            
             // Generate clip suggestions via n8n
             $aiClipsService = new AIClips();
             $suggestions = $aiClipsService->generateClipSuggestions(
                 $transcript['transcript_text'],
+                $transcript['transcript_raw'],
                 $videoId,
                 $currentUser['id']
             );
