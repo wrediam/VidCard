@@ -1771,9 +1771,9 @@
             currentClipIndex = index;
             const clip = allClips[index];
             
-            // Convert milliseconds to seconds
-            const startSeconds = Math.floor(clip.start_time_ms / 1000);
-            const endSeconds = Math.floor(clip.end_time_ms / 1000);
+            // Times are already in seconds from backend
+            const startSeconds = clip.start_time;
+            const endSeconds = clip.end_time;
             const durationSeconds = endSeconds - startSeconds;
             
             // Format time display
