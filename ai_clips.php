@@ -488,43 +488,39 @@ class AIClips {
         $middleWords = array_slice($aiWords, $middleStart, min(10, $wordCount - $middleStart));
         $endWords = array_slice($aiWords, -min(10, $wordCount));
         
-        // Try to find start position using beginning words
-        error_log("Clip #$clipIndex: Searching for start words: " . implode(' ', array_slice($startWords, 0, 5)) . "...");
-        $startPos = $this->findFlexibleMatch($startWords, $normalizedTranscript);
+        // Try direct substring search first (most reliable)
+        $searchPhrase = implode(' ', array_slice($aiWords, 0, min(15, count($aiWords)))); // First 15 words
+        error_log("Clip #$clipIndex: Searching for phrase: " . substr($searchPhrase, 0, 80) . "...");
+        
+        $startPos = strpos($normalizedTranscript, $searchPhrase);
+        
+        // If direct search fails, try with fewer words
+        if ($startPos === false && count($aiWords) >= 10) {
+            $searchPhrase = implode(' ', array_slice($aiWords, 0, 10)); // Try first 10 words
+            error_log("Clip #$clipIndex: Trying shorter phrase: " . substr($searchPhrase, 0, 80) . "...");
+            $startPos = strpos($normalizedTranscript, $searchPhrase);
+        }
+        
+        // If still fails, try first 7 words
+        if ($startPos === false && count($aiWords) >= 7) {
+            $searchPhrase = implode(' ', array_slice($aiWords, 0, 7));
+            error_log("Clip #$clipIndex: Trying even shorter phrase: " . substr($searchPhrase, 0, 80) . "...");
+            $startPos = strpos($normalizedTranscript, $searchPhrase);
+        }
         
         if ($startPos === false) {
-            error_log("Clip #$clipIndex: Could not find start of quotation in transcript");
-            error_log("Clip #$clipIndex: First 200 chars of AI quote: " . substr($normalizedAI, 0, 200));
+            error_log("Clip #$clipIndex: Could not find quotation in transcript using direct search");
+            error_log("Clip #$clipIndex: AI quote: " . substr($normalizedAI, 0, 150));
             return null;
         }
         
         error_log("Clip #$clipIndex: Found start position at char {$startPos}");
         
-        // Verify the match by checking if middle words appear after start
-        $middleSearchStart = $startPos + (strlen($normalizedAI) * 0.3); // Look 30% into expected quote
-        error_log("Clip #$clipIndex: Searching for middle words: " . implode(' ', array_slice($middleWords, 0, 5)) . "...");
-        $middlePos = $this->findFlexibleMatch($middleWords, $normalizedTranscript, (int)$middleSearchStart);
+        // Estimate end position based on AI quote length
+        $estimatedLength = strlen($normalizedAI) * 1.1; // Allow 10% variance
+        $endPos = min($startPos + $estimatedLength, strlen($normalizedTranscript));
         
-        if ($middlePos === false || $middlePos > $startPos + strlen($normalizedAI) * 2) {
-            error_log("Clip #$clipIndex: Middle words not found in expected range (middlePos=" . ($middlePos === false ? 'false' : $middlePos) . ", maxExpected=" . ($startPos + strlen($normalizedAI) * 2) . ")");
-            error_log("Clip #$clipIndex: Text at start position: " . substr($normalizedTranscript, $startPos, 150));
-            return null;
-        }
-        
-        // Look for end pattern after middle position
-        $endSearchStart = max($middlePos, $startPos + (strlen($normalizedAI) * 0.5));
-        $endPos = $this->findFlexibleMatch($endWords, $normalizedTranscript, (int)$endSearchStart);
-        
-        if ($endPos === false) {
-            // Estimate end based on AI quote length
-            $estimatedLength = strlen($normalizedAI) * 1.2; // Allow 20% variance
-            $endPos = min($startPos + $estimatedLength, strlen($normalizedTranscript));
-            error_log("Clip #$clipIndex: Could not find exact end, using estimated position");
-        } else {
-            // Add length of end words to get actual end position
-            $endWordsLength = strlen(implode(' ', $endWords));
-            $endPos += $endWordsLength;
-        }
+        error_log("Clip #$clipIndex: Using estimated end position at char {$endPos}");
         
         // Extract the actual text from transcript
         $extractedLength = $endPos - $startPos;
