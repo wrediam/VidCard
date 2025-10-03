@@ -2279,13 +2279,9 @@
                 console.log('Download response:', data);
                 
                 if (data.success && data.download_url) {
-                    // Create a temporary link and trigger download
-                    const a = document.createElement('a');
-                    a.href = data.download_url;
-                    a.download = data.filename || 'clip.mp4';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
+                    // Open download URL in new window - browser will handle the download
+                    // We can't use <a download> due to CORS restrictions on external domains
+                    window.location.href = data.download_url;
                     
                     showToast('Clip download started! Check your downloads folder.', 'success');
                     
