@@ -2279,9 +2279,11 @@
                 console.log('Download response:', data);
                 
                 if (data.success && data.download_url) {
-                    // Open download URL in new window - browser will handle the download
-                    // We can't use <a download> due to CORS restrictions on external domains
-                    window.location.href = data.download_url;
+                    // Force HTTPS for security (mixed content protection)
+                    let downloadUrl = data.download_url.replace('http://', 'https://');
+                    
+                    // Open download URL - browser will handle the download
+                    window.location.href = downloadUrl;
                     
                     showToast('Clip download started! Check your downloads folder.', 'success');
                     
