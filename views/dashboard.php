@@ -434,7 +434,7 @@
                                                 <!-- Highlighted clip segment -->
                                                 <div 
                                                     id="clipSegment" 
-                                                    class="absolute top-0 h-full bg-gradient-to-r from-orange-400 to-red-500 opacity-80 transition-all duration-150"
+                                                    class="absolute top-0 h-full bg-gradient-to-r from-orange-400 to-red-500 opacity-80 transition-all duration-150 cursor-grab active:cursor-grabbing"
                                                     style="left: 0%; width: 100%;"
                                                 >
                                                     <!-- Start handle -->
@@ -1689,7 +1689,10 @@
         let originalClipStart = 0; // Original AI suggestion start
         let originalClipEnd = 0;   // Original AI suggestion end
         let isDragging = false;
-        let dragType = null; // 'start' or 'end'
+        let dragType = null; // 'start', 'end', or 'segment'
+        let dragStartX = 0; // Mouse X position when drag started
+        let dragStartClipStart = 0; // Clip start time when drag started
+        let dragStartClipEnd = 0; // Clip end time when drag started
 
         // Clip Suggestions Modal Functions
         async function handleClipSuggestions() {
@@ -2028,11 +2031,13 @@
         function setupTimelineDragHandlers() {
             const startHandle = document.getElementById('startHandle');
             const endHandle = document.getElementById('endHandle');
+            const clipSegment = document.getElementById('clipSegment');
             const timelineBar = document.getElementById('timelineBar');
             
             // Start handle drag
             startHandle.addEventListener('mousedown', (e) => {
                 e.preventDefault();
+                e.stopPropagation(); // Prevent segment drag
                 isDragging = true;
                 dragType = 'start';
                 document.body.style.cursor = 'ew-resize';
@@ -2041,9 +2046,26 @@
             // End handle drag
             endHandle.addEventListener('mousedown', (e) => {
                 e.preventDefault();
+                e.stopPropagation(); // Prevent segment drag
                 isDragging = true;
                 dragType = 'end';
                 document.body.style.cursor = 'ew-resize';
+            });
+            
+            // Segment drag (move entire clip)
+            clipSegment.addEventListener('mousedown', (e) => {
+                // Only if not clicking on handles
+                if (e.target.closest('#startHandle') || e.target.closest('#endHandle')) {
+                    return;
+                }
+                
+                e.preventDefault();
+                isDragging = true;
+                dragType = 'segment';
+                dragStartX = e.clientX;
+                dragStartClipStart = clipStartTime;
+                dragStartClipEnd = clipEndTime;
+                document.body.style.cursor = 'grab';
             });
             
             // Mouse move
@@ -2065,8 +2087,30 @@
                     // Max clip length is 6 minutes (360 seconds)
                     const maxEndTime = Math.min(clipStartTime + 360, videoDuration);
                     clipEndTime = Math.max(Math.min(newTime, maxEndTime), clipStartTime + 1);
+                } else if (dragType === 'segment') {
+                    // Move entire segment
+                    const deltaX = e.clientX - dragStartX;
+                    const deltaPercent = deltaX / rect.width;
+                    const deltaTime = Math.round(deltaPercent * videoDuration);
+                    
+                    const clipDuration = dragStartClipEnd - dragStartClipStart;
+                    let newStart = dragStartClipStart + deltaTime;
+                    let newEnd = dragStartClipEnd + deltaTime;
+                    
+                    // Keep within bounds
+                    if (newStart < 0) {
+                        newStart = 0;
+                        newEnd = clipDuration;
+                    } else if (newEnd > videoDuration) {
+                        newEnd = videoDuration;
+                        newStart = videoDuration - clipDuration;
+                    }
+                    
+                    clipStartTime = newStart;
+                    clipEndTime = newEnd;
                 }
                 
+                // Only update UI, don't update embed or save yet
                 updateTimelineUI();
                 updateTimeLabels();
             });
@@ -2074,15 +2118,17 @@
             // Mouse up
             document.addEventListener('mouseup', () => {
                 if (isDragging) {
+                    const wasDragging = isDragging;
                     isDragging = false;
                     dragType = null;
                     document.body.style.cursor = 'default';
                     
-                    // Update embed with new times
-                    updateClipEmbed();
-                    
-                    // Auto-save edit to backend
-                    saveClipEdit();
+                    // Only update embed and save when drag is complete (performance optimization)
+                    if (wasDragging) {
+                        console.log('Drag complete, updating embed and saving...');
+                        updateClipEmbed();
+                        saveClipEdit();
+                    }
                 }
             });
         }
