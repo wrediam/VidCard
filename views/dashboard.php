@@ -1900,6 +1900,21 @@
             // Get current video data
             getCurrentVideoData();
             
+            // Estimate video duration from clips (find the latest end time)
+            let maxEndTime = 0;
+            clips.forEach(clip => {
+                if (clip.end_time > maxEndTime) {
+                    maxEndTime = clip.end_time;
+                }
+            });
+            
+            // Set a reasonable video duration estimate
+            // Use the latest clip end time + buffer, but ensure at least 6 minutes for adjustment
+            if (maxEndTime > 0) {
+                videoDuration = Math.max(maxEndTime + 120, 360); // Latest clip + 2 min buffer, min 6 min
+                console.log(`Estimated video duration from clips: ${videoDuration}s (${Math.floor(videoDuration/60)}:${(videoDuration%60).toString().padStart(2,'0')})`);
+            }
+            
             // Show the first clip
             showClip(0);
             
@@ -1924,9 +1939,12 @@
             originalClipStart = startSeconds;
             originalClipEnd = endSeconds;
             
-            // Set video duration to allow full timeline adjustment
-            // Allow up to 6 minutes (360 seconds) for clip selection
-            videoDuration = Math.max(endSeconds + 120, 360); // At least 6 minutes or clip end + 2 minutes
+            // Video duration is already set in renderClipSuggestions()
+            // But ensure it's at least long enough for this clip
+            if (videoDuration < endSeconds + 60) {
+                videoDuration = Math.max(endSeconds + 120, 360);
+                console.log(`Adjusted video duration for clip: ${videoDuration}s`);
+            }
             
             // Format time display
             const formatTime = (seconds) => {
