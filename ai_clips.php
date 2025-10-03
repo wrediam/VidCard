@@ -150,10 +150,10 @@ class AIClips {
                             'end_time_ms' => $timestamps['end_time_ms'],
                             'suggested_title' => $suggestion['suggested_title'] ?? 'Clip ' . (count($processedSuggestions) + 1),
                             'reason' => $suggestion['reason'] ?? 'AI-selected clip',
-                            'match_confidence' => $timestamps['match_confidence'] ?? 1.0
+                            'match_confidence' => $timestamps['confidence'] ?? 1.0
                         ];
                         error_log("✅ SUCCESS Clip #$index: {$timestamps['start_time_ms']}ms ({$startSec}s) - {$timestamps['end_time_ms']}ms ({$endSec}s)");
-                        error_log("Clip #$index: Match confidence: " . round($timestamps['match_confidence'] * 100) . "%, Corrected: " . ($verifiedQuotation['was_corrected'] ? 'yes' : 'no'));
+                        error_log("Clip #$index: Match confidence: " . round(($timestamps['confidence'] ?? 1.0) * 100) . "%, Corrected: " . ($verifiedQuotation['was_corrected'] ? 'yes' : 'no'));
                         error_log("Clip #$index: Title: " . ($suggestion['suggested_title'] ?? 'Untitled'));
                         error_log("Clip #$index: Corrected text used: " . substr($verifiedQuotation['corrected_text'], 0, 150) . "...");
                     } else {
@@ -599,22 +599,23 @@ class AIClips {
         $endWords = array_slice($aiWords, -min(10, $wordCount));
         
         // Try direct substring search first (most reliable)
-        $searchPhrase = implode(' ', array_slice($aiWords, 0, min(15, count($aiWords)))); // First 15 words
+        // Start with first 10 words for better accuracy
+        $searchPhrase = implode(' ', array_slice($aiWords, 0, min(10, count($aiWords))));
         error_log("Clip #$clipIndex: Searching for phrase: " . substr($searchPhrase, 0, 80) . "...");
         
         $startPos = strpos($normalizedTranscript, $searchPhrase);
         
         // If direct search fails, try with fewer words
-        if ($startPos === false && count($aiWords) >= 10) {
-            $searchPhrase = implode(' ', array_slice($aiWords, 0, 10)); // Try first 10 words
-            error_log("Clip #$clipIndex: Trying shorter phrase: " . substr($searchPhrase, 0, 80) . "...");
+        if ($startPos === false && count($aiWords) >= 7) {
+            $searchPhrase = implode(' ', array_slice($aiWords, 0, 7));
+            error_log("Clip #$clipIndex: Trying shorter phrase (7 words): " . substr($searchPhrase, 0, 80) . "...");
             $startPos = strpos($normalizedTranscript, $searchPhrase);
         }
         
-        // If still fails, try first 7 words
-        if ($startPos === false && count($aiWords) >= 7) {
-            $searchPhrase = implode(' ', array_slice($aiWords, 0, 7));
-            error_log("Clip #$clipIndex: Trying even shorter phrase: " . substr($searchPhrase, 0, 80) . "...");
+        // If still fails, try first 5 words
+        if ($startPos === false && count($aiWords) >= 5) {
+            $searchPhrase = implode(' ', array_slice($aiWords, 0, 5));
+            error_log("Clip #$clipIndex: Trying even shorter phrase (5 words): " . substr($searchPhrase, 0, 80) . "...");
             $startPos = strpos($normalizedTranscript, $searchPhrase);
         }
         
@@ -637,7 +638,8 @@ class AIClips {
         $extractedText = substr($normalizedTranscript, $startPos, $extractedLength);
         
         // Get the original (non-normalized) text from the transcript
-        $correctedText = $this->extractOriginalText($transcriptText, $startPos, $extractedLength);
+        // Use the chunk text directly since we're already searching within it
+        $correctedText = substr($transcriptText, $startPos, $extractedLength);
         
         // Calculate similarity score
         similar_text($normalizedAI, $extractedText, $similarityPercent);
