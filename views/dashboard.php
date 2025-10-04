@@ -1701,9 +1701,9 @@
         // Keyboard navigation for carousel
         document.addEventListener('keydown', function(e) {
             const aiToolsModal = document.getElementById('aiToolsModal');
-            const clipModal = document.getElementById('clipSuggestionsModal');
+            const clipContainer = document.getElementById('clipSuggestionsContainer');
             
-            if (!aiToolsModal.classList.contains('hidden')) {
+            if (aiToolsModal && !aiToolsModal.classList.contains('hidden')) {
                 if (e.key === 'ArrowLeft') {
                     previousSuggestion();
                 } else if (e.key === 'ArrowRight') {
@@ -1711,7 +1711,7 @@
                 }
             }
             
-            if (!clipModal.classList.contains('hidden')) {
+            if (clipContainer && !clipContainer.classList.contains('hidden')) {
                 if (e.key === 'ArrowLeft') {
                     previousClip();
                 } else if (e.key === 'ArrowRight') {
