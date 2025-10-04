@@ -2281,7 +2281,7 @@
         function updateClipEmbed() {
             if (!currentVideoData) return;
             
-            const embedUrl = `https://www.youtube.com/embed/${currentVideoData.video_id}?start=${clipStartTime}&end=${clipEndTime}&autoplay=0`;
+            const embedUrl = `https://www.youtube.com/embed/${currentVideoData.video_id}?start=${clipStartTime}&end=${clipEndTime}&autoplay=0&rel=0`;
             document.getElementById('clipEmbed').innerHTML = `
                 <iframe 
                     src="${embedUrl}"
