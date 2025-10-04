@@ -2064,7 +2064,6 @@
             document.getElementById('clipStartLabel').textContent = formatTime(clipStartTime);
             document.getElementById('clipEndLabel').textContent = formatTime(clipEndTime);
             document.getElementById('clipDurationLabel').textContent = `${clipEndTime - clipStartTime}s`;
-            document.getElementById('videoEndTime').textContent = formatTime(videoDuration);
             
             // Setup drag handlers
             setupTimelineDragHandlers();
