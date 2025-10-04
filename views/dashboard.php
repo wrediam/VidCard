@@ -2342,11 +2342,13 @@
                 playheadUpdateInterval = null;
             }
             
-            // Create container for YouTube player
-            document.getElementById('clipEmbed').innerHTML = `<div id="ytPlayerContainer"></div>`;
+            // Create container for YouTube player with absolute positioning
+            document.getElementById('clipEmbed').innerHTML = `<div id="ytPlayerContainer" class="absolute top-0 left-0 w-full h-full"></div>`;
             
             // Initialize YouTube player with IFrame API
             ytPlayer = new YT.Player('ytPlayerContainer', {
+                width: '100%',
+                height: '100%',
                 videoId: currentVideoData.video_id,
                 playerVars: {
                     start: clipStartTime,
@@ -2354,7 +2356,10 @@
                     autoplay: 0,
                     rel: 0,
                     modestbranding: 1,
-                    controls: 1
+                    controls: 1,
+                    iv_load_policy: 3,  // Disable annotations
+                    fs: 1,              // Enable fullscreen
+                    playsinline: 1      // Play inline on mobile
                 },
                 events: {
                     onReady: onPlayerReady,
