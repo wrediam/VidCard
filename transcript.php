@@ -14,7 +14,20 @@ class Transcript {
      */
     public function fetchTranscript($youtubeUrl, $videoId) {
         try {
+            error_log("=== TRANSCRIPT FETCH START for video: $videoId ===");
+            error_log("YouTube URL: $youtubeUrl");
+            
+            // Check if API key is set
+            if (!defined('CAPTION_API_KEY') || empty(CAPTION_API_KEY)) {
+                error_log("ERROR: CAPTION_API_KEY is not defined or empty!");
+                error_log("Please set CAPTION_API_KEY in your .env file");
+                return null;
+            }
+            
+            error_log("API Key is set (length: " . strlen(CAPTION_API_KEY) . ")");
+            
             $url = $this->captionApiUrl . '?url=' . urlencode($youtubeUrl) . '&format=raw';
+            error_log("Caption API URL: $url");
             
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $url);
@@ -27,29 +40,64 @@ class Transcript {
             
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
             curl_close($ch);
             
+            error_log("HTTP Code: $httpCode");
+            if ($curlError) {
+                error_log("CURL Error: $curlError");
+            }
+            
             if ($httpCode !== 200 || !$response) {
+                error_log("Failed: HTTP code $httpCode or empty response");
+                error_log("Response preview: " . substr($response, 0, 200));
                 return null;
             }
+            
+            error_log("Response received, length: " . strlen($response));
+            error_log("Response preview: " . substr($response, 0, 200));
             
             $data = json_decode($response, true);
             
-            if (!$data || !isset($data['data'])) {
+            if (!$data) {
+                error_log("Failed to decode JSON response");
+                error_log("JSON error: " . json_last_error_msg());
                 return null;
             }
+            
+            if (!isset($data['data'])) {
+                error_log("No 'data' field in response");
+                error_log("Response keys: " . implode(', ', array_keys($data)));
+                return null;
+            }
+            
+            error_log("Data field found, attempting to parse nested JSON");
             
             // Parse the nested JSON in data field
             $captionData = json_decode($data['data'], true);
             
-            if (!$captionData || !isset($captionData['events'])) {
+            if (!$captionData) {
+                error_log("Failed to decode nested JSON in data field");
+                error_log("Nested JSON error: " . json_last_error_msg());
+                error_log("Data field preview: " . substr($data['data'], 0, 200));
                 return null;
             }
+            
+            if (!isset($captionData['events'])) {
+                error_log("No 'events' field in caption data");
+                error_log("Caption data keys: " . implode(', ', array_keys($captionData)));
+                return null;
+            }
+            
+            $eventCount = count($captionData['events']);
+            error_log("SUCCESS: Found $eventCount caption events");
+            error_log("=== TRANSCRIPT FETCH END ===");
             
             return $captionData;
             
         } catch (Exception $e) {
             error_log('Transcript fetch error: ' . $e->getMessage());
+            error_log('Stack trace: ' . $e->getTraceAsString());
             return null;
         }
     }
@@ -210,23 +258,38 @@ class Transcript {
      * Process and save transcript for a video
      */
     public function processTranscript($youtubeUrl, $videoId) {
+        error_log("=== PROCESS TRANSCRIPT START for video: $videoId ===");
+        error_log("YouTube URL: $youtubeUrl");
+        
         $captionData = $this->fetchTranscript($youtubeUrl, $videoId);
         
         if (!$captionData) {
+            error_log("Caption data is null, marking transcript as unavailable");
             // Mark as unavailable so we don't keep trying
             $this->markUnavailable($videoId);
+            error_log("=== PROCESS TRANSCRIPT END (unavailable) ===");
             return false;
         }
         
+        error_log("Caption data received, extracting clean text");
         $cleanText = $this->extractCleanText($captionData);
         
         if (empty($cleanText)) {
+            error_log("Clean text is empty, marking transcript as unavailable");
             // Mark as unavailable if extraction failed
             $this->markUnavailable($videoId);
+            error_log("=== PROCESS TRANSCRIPT END (empty text) ===");
             return false;
         }
         
-        return $this->saveTranscript($videoId, $captionData, $cleanText);
+        error_log("Clean text extracted, length: " . strlen($cleanText));
+        error_log("Text preview: " . substr($cleanText, 0, 100));
+        
+        $result = $this->saveTranscript($videoId, $captionData, $cleanText);
+        error_log("Save result: " . ($result ? 'SUCCESS' : 'FAILED'));
+        error_log("=== PROCESS TRANSCRIPT END ===");
+        
+        return $result;
     }
     
     /**
