@@ -229,11 +229,11 @@ class Video {
     
     /**
      * Request vid.wredia.com to pre-cache the video on their server
-     * This makes clip downloads much faster later
+     * This is a fire-and-forget request - we don't wait for the download to complete
      */
     private function cacheVideoOnServer($youtubeUrl, $resolution = '1080p') {
         try {
-            error_log("=== VIDEO CACHE REQUEST START ===");
+            error_log("=== VIDEO CACHE REQUEST (async) ===");
             error_log("YouTube URL: $youtubeUrl");
             
             $cacheApiUrl = 'https://vid.wredia.com/download/cache';
@@ -249,7 +249,8 @@ class Video {
             curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 5); // Short timeout - just initiate the request
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2); // Quick connection timeout
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
                 'Content-Type: application/json',
                 'X-API-Key: ' . CAPTION_API_KEY
@@ -260,40 +261,27 @@ class Video {
             $curlError = curl_error($ch);
             curl_close($ch);
             
-            error_log("Cache API HTTP Code: $httpCode");
-            
-            if ($curlError) {
-                error_log("Cache API CURL Error: $curlError");
-                return false;
-            }
-            
-            if ($httpCode !== 200) {
-                error_log("Cache API failed with HTTP $httpCode");
-                error_log("Response: " . substr($response, 0, 200));
-                return false;
-            }
-            
-            $data = json_decode($response, true);
-            
-            if ($data && isset($data['message'])) {
-                $cached = $data['cached'] ?? false;
-                $cacheStatus = $cached ? 'already cached' : 'newly cached';
-                error_log("SUCCESS: Video $cacheStatus on vid.wredia.com");
+            // We only care that the request was initiated successfully
+            if ($httpCode === 200) {
+                error_log("Cache request initiated successfully");
                 
-                if (isset($data['file_size_mb'])) {
-                    error_log("File size: {$data['file_size_mb']} MB");
+                $data = json_decode($response, true);
+                if ($data && isset($data['cached']) && $data['cached'] === true) {
+                    error_log("Video already cached on server");
+                } else {
+                    error_log("Video caching started in background");
                 }
-                if (isset($data['cache_expires_in_hours'])) {
-                    error_log("Cache expires in: {$data['cache_expires_in_hours']} hours");
-                }
+            } else {
+                error_log("Cache request failed: HTTP $httpCode" . ($curlError ? " - $curlError" : ""));
             }
             
-            error_log("=== VIDEO CACHE REQUEST END ===");
+            // Always return true - we don't want to fail video save if caching fails
             return true;
             
         } catch (Exception $e) {
             error_log('Video cache exception: ' . $e->getMessage());
-            return false;
+            // Don't fail - caching is optional
+            return true;
         }
     }
     
