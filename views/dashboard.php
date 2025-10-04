@@ -7,6 +7,7 @@
     <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
     <link rel="icon" type="image/png" href="/images/icon.png">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body {
@@ -431,7 +432,17 @@
                                         <div class="relative">
                                             <!-- Zoom Controls -->
                                             <div class="flex items-center justify-between mb-2">
-                                                <div class="text-xs text-slate-600 font-medium">Timeline View</div>
+                                                <div class="flex items-center gap-2">
+                                                    <button id="playPauseBtn" onclick="togglePlayPause()" class="p-2 bg-blue-500 hover:bg-blue-600 rounded-full text-white transition shadow-md">
+                                                        <svg id="playIcon" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                                            <path d="M8 5v14l11-7z"/>
+                                                        </svg>
+                                                        <svg id="pauseIcon" class="w-4 h-4 hidden" fill="currentColor" viewBox="0 0 24 24">
+                                                            <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+                                                        </svg>
+                                                    </button>
+                                                    <div class="text-xs text-slate-600 font-medium">Timeline Controls</div>
+                                                </div>
                                                 <div class="flex items-center gap-2">
                                                     <button onclick="zoomOut()" class="px-2 py-1 bg-slate-200 hover:bg-slate-300 rounded text-xs font-medium transition">
                                                         <svg class="w-3 h-3 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -451,6 +462,16 @@
                                             
                                             <!-- Full video timeline bar -->
                                             <div class="relative h-12 bg-slate-200 rounded-lg overflow-hidden cursor-pointer" id="timelineBar">
+                                                <!-- Playhead indicator -->
+                                                <div 
+                                                    id="playhead" 
+                                                    class="absolute top-0 h-full w-0.5 bg-blue-600 z-20 pointer-events-none transition-all duration-100"
+                                                    style="left: 0%;"
+                                                >
+                                                    <div class="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-blue-600 rounded-full shadow-lg"></div>
+                                                    <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-blue-600 rounded-full shadow-lg"></div>
+                                                </div>
+                                                
                                                 <!-- Highlighted clip segment -->
                                                 <div 
                                                     id="clipSegment" 
@@ -2155,6 +2176,12 @@
             
             updateTimelineUI();
             updateTimeLabels();
+            
+            // Update playhead position after zoom
+            if (ytPlayer && ytPlayer.getCurrentTime) {
+                const currentTime = ytPlayer.getCurrentTime();
+                updatePlayheadPosition(currentTime);
+            }
         }
 
         function setupTimelineDragHandlers() {
@@ -2162,6 +2189,26 @@
             const endHandle = document.getElementById('endHandle');
             const clipSegment = document.getElementById('clipSegment');
             const timelineBar = document.getElementById('timelineBar');
+            
+            // Timeline click to seek
+            timelineBar.addEventListener('click', (e) => {
+                // Don't seek if clicking on handles or during drag
+                if (e.target.closest('#startHandle') || e.target.closest('#endHandle') || isDragging) {
+                    return;
+                }
+                
+                const rect = timelineBar.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const percent = Math.max(0, Math.min(1, x / rect.width));
+                const viewDuration = timelineViewEnd - timelineViewStart;
+                const seekTime = timelineViewStart + (percent * viewDuration);
+                
+                // Seek the YouTube player
+                if (ytPlayer && ytPlayer.seekTo) {
+                    ytPlayer.seekTo(seekTime, true);
+                    updatePlayheadPosition(seekTime);
+                }
+            });
             
             // Start handle drag
             startHandle.addEventListener('mousedown', (e) => {
@@ -2278,19 +2325,119 @@
             updateClipInfoDisplay();
         }
 
+        // YouTube Player instance
+        let ytPlayer = null;
+        let playheadUpdateInterval = null;
+
         function updateClipEmbed() {
             if (!currentVideoData) return;
             
-            const embedUrl = `https://www.youtube.com/embed/${currentVideoData.video_id}?start=${clipStartTime}&end=${clipEndTime}&autoplay=0&rel=0`;
-            document.getElementById('clipEmbed').innerHTML = `
-                <iframe 
-                    src="${embedUrl}"
-                    frameborder="0" 
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                    allowfullscreen
-                    class="absolute top-0 left-0 w-full h-full"
-                ></iframe>
-            `;
+            // Clear existing player and interval
+            if (ytPlayer) {
+                ytPlayer.destroy();
+                ytPlayer = null;
+            }
+            if (playheadUpdateInterval) {
+                clearInterval(playheadUpdateInterval);
+                playheadUpdateInterval = null;
+            }
+            
+            // Create container for YouTube player
+            document.getElementById('clipEmbed').innerHTML = `<div id="ytPlayerContainer"></div>`;
+            
+            // Initialize YouTube player with IFrame API
+            ytPlayer = new YT.Player('ytPlayerContainer', {
+                videoId: currentVideoData.video_id,
+                playerVars: {
+                    start: clipStartTime,
+                    end: clipEndTime,
+                    autoplay: 0,
+                    rel: 0,
+                    modestbranding: 1,
+                    controls: 1
+                },
+                events: {
+                    onReady: onPlayerReady,
+                    onStateChange: onPlayerStateChange
+                }
+            });
+        }
+        
+        function onPlayerReady(event) {
+            console.log('YouTube player ready');
+            // Start updating playhead position
+            startPlayheadUpdate();
+        }
+        
+        function onPlayerStateChange(event) {
+            // YT.PlayerState.PLAYING = 1
+            // YT.PlayerState.PAUSED = 2
+            // YT.PlayerState.ENDED = 0
+            if (event.data === YT.PlayerState.PLAYING) {
+                startPlayheadUpdate();
+                updatePlayPauseButton(true);
+            } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
+                stopPlayheadUpdate();
+                updatePlayPauseButton(false);
+            }
+        }
+        
+        function togglePlayPause() {
+            if (!ytPlayer || !ytPlayer.getPlayerState) return;
+            
+            const state = ytPlayer.getPlayerState();
+            if (state === YT.PlayerState.PLAYING) {
+                ytPlayer.pauseVideo();
+            } else {
+                ytPlayer.playVideo();
+            }
+        }
+        
+        function updatePlayPauseButton(isPlaying) {
+            const playIcon = document.getElementById('playIcon');
+            const pauseIcon = document.getElementById('pauseIcon');
+            
+            if (isPlaying) {
+                playIcon.classList.add('hidden');
+                pauseIcon.classList.remove('hidden');
+            } else {
+                playIcon.classList.remove('hidden');
+                pauseIcon.classList.add('hidden');
+            }
+        }
+        
+        function startPlayheadUpdate() {
+            if (playheadUpdateInterval) return;
+            
+            playheadUpdateInterval = setInterval(() => {
+                if (ytPlayer && ytPlayer.getCurrentTime) {
+                    const currentTime = ytPlayer.getCurrentTime();
+                    updatePlayheadPosition(currentTime);
+                }
+            }, 100); // Update every 100ms for smooth animation
+        }
+        
+        function stopPlayheadUpdate() {
+            if (playheadUpdateInterval) {
+                clearInterval(playheadUpdateInterval);
+                playheadUpdateInterval = null;
+            }
+        }
+        
+        function updatePlayheadPosition(currentTime) {
+            const playhead = document.getElementById('playhead');
+            if (!playhead) return;
+            
+            const viewDuration = timelineViewEnd - timelineViewStart;
+            const playheadPercent = ((currentTime - timelineViewStart) / viewDuration) * 100;
+            
+            // Only show playhead if within visible timeline range
+            if (playheadPercent >= 0 && playheadPercent <= 100) {
+                playhead.style.left = `${playheadPercent}%`;
+                playhead.style.opacity = '1';
+            } else {
+                playhead.style.opacity = '0';
+            }
         }
 
         function updateClipInfoDisplay() {
