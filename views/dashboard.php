@@ -2222,7 +2222,7 @@
                     // Move entire segment
                     const deltaX = e.clientX - dragStartX;
                     const deltaPercent = deltaX / rect.width;
-                    const deltaTime = Math.round(deltaPercent * videoDuration);
+                    const deltaTime = Math.round(deltaPercent * viewDuration);
                     
                     const clipDuration = dragStartClipEnd - dragStartClipStart;
                     let newStart = dragStartClipStart + deltaTime;
