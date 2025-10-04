@@ -177,20 +177,124 @@ class Video {
             'duration' => $videoData['duration'] ?? null
         ]);
         
-        // Try to fetch transcript asynchronously (don't block on failure)
+        // Only fetch transcript and cache video if this is the FIRST time ANY user adds this video
+        // (Transcripts and caching are video-specific, not user-specific)
         if ($result) {
-            try {
-                $this->transcriptService->processTranscript(
-                    $videoData['youtube_url'], 
-                    $videoData['video_id']
-                );
-            } catch (Exception $e) {
-                // Log but don't fail the video save
-                error_log('Transcript fetch failed for ' . $videoData['video_id'] . ': ' . $e->getMessage());
+            $isFirstTimeVideo = $this->isFirstTimeVideo($videoData['video_id'], $userId);
+            
+            if ($isFirstTimeVideo) {
+                error_log("First time video {$videoData['video_id']} added - fetching transcript and caching");
+                
+                // Fetch transcript
+                try {
+                    $this->transcriptService->processTranscript(
+                        $videoData['youtube_url'], 
+                        $videoData['video_id']
+                    );
+                } catch (Exception $e) {
+                    error_log('Transcript fetch failed for ' . $videoData['video_id'] . ': ' . $e->getMessage());
+                }
+                
+                // Pre-cache video on vid.wredia.com
+                try {
+                    $this->cacheVideoOnServer($videoData['youtube_url']);
+                } catch (Exception $e) {
+                    error_log('Video cache request failed for ' . $videoData['video_id'] . ': ' . $e->getMessage());
+                }
+            } else {
+                error_log("Video {$videoData['video_id']} already exists for another user - skipping transcript/cache");
             }
         }
         
         return $result;
+    }
+    
+    /**
+     * Check if this is the first time ANY user is adding this video
+     * Used to avoid duplicate transcript fetching and caching
+     */
+    private function isFirstTimeVideo($videoId, $currentUserId) {
+        $stmt = $this->db->prepare(
+            'SELECT COUNT(*) as count FROM videos WHERE video_id = :video_id AND user_id != :user_id'
+        );
+        $stmt->execute([
+            'video_id' => $videoId,
+            'user_id' => $currentUserId
+        ]);
+        
+        $result = $stmt->fetch();
+        // If count is 0, this is the first time (no other users have this video)
+        return $result['count'] == 0;
+    }
+    
+    /**
+     * Request vid.wredia.com to pre-cache the video on their server
+     * This makes clip downloads much faster later
+     */
+    private function cacheVideoOnServer($youtubeUrl, $resolution = '1080p') {
+        try {
+            error_log("=== VIDEO CACHE REQUEST START ===");
+            error_log("YouTube URL: $youtubeUrl");
+            
+            $cacheApiUrl = 'https://vid.wredia.com/download/cache';
+            
+            $payload = json_encode([
+                'url' => $youtubeUrl,
+                'resolution' => $resolution
+            ]);
+            
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $cacheApiUrl);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Content-Type: application/json',
+                'X-API-Key: ' . CAPTION_API_KEY
+            ]);
+            
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            curl_close($ch);
+            
+            error_log("Cache API HTTP Code: $httpCode");
+            
+            if ($curlError) {
+                error_log("Cache API CURL Error: $curlError");
+                return false;
+            }
+            
+            if ($httpCode !== 200) {
+                error_log("Cache API failed with HTTP $httpCode");
+                error_log("Response: " . substr($response, 0, 200));
+                return false;
+            }
+            
+            $data = json_decode($response, true);
+            
+            if ($data && isset($data['message'])) {
+                $cached = $data['cached'] ?? false;
+                $cacheStatus = $cached ? 'already cached' : 'newly cached';
+                error_log("SUCCESS: Video $cacheStatus on vid.wredia.com");
+                
+                if (isset($data['file_size_mb'])) {
+                    error_log("File size: {$data['file_size_mb']} MB");
+                }
+                if (isset($data['cache_expires_in_hours'])) {
+                    error_log("Cache expires in: {$data['cache_expires_in_hours']} hours");
+                }
+            }
+            
+            error_log("=== VIDEO CACHE REQUEST END ===");
+            return true;
+            
+        } catch (Exception $e) {
+            error_log('Video cache exception: ' . $e->getMessage());
+            return false;
+        }
     }
     
     /**
