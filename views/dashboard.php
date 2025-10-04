@@ -429,6 +429,26 @@
                                         
                                         <!-- Timeline Container -->
                                         <div class="relative">
+                                            <!-- Zoom Controls -->
+                                            <div class="flex items-center justify-between mb-2">
+                                                <div class="text-xs text-slate-600 font-medium">Timeline View</div>
+                                                <div class="flex items-center gap-2">
+                                                    <button onclick="zoomOut()" class="px-2 py-1 bg-slate-200 hover:bg-slate-300 rounded text-xs font-medium transition">
+                                                        <svg class="w-3 h-3 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7"></path>
+                                                        </svg>
+                                                        Zoom Out
+                                                    </button>
+                                                    <button onclick="zoomIn()" class="px-2 py-1 bg-slate-200 hover:bg-slate-300 rounded text-xs font-medium transition">
+                                                        <svg class="w-3 h-3 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
+                                                        </svg>
+                                                        Zoom In
+                                                    </button>
+                                                    <button onclick="resetZoom()" class="px-2 py-1 bg-slate-200 hover:bg-slate-300 rounded text-xs font-medium transition">Reset</button>
+                                                </div>
+                                            </div>
+                                            
                                             <!-- Full video timeline bar -->
                                             <div class="relative h-12 bg-slate-200 rounded-lg overflow-hidden cursor-pointer" id="timelineBar">
                                                 <!-- Highlighted clip segment -->
@@ -466,9 +486,8 @@
                                             </div>
                                             
                                             <!-- Time markers -->
-                                            <div class="flex justify-between mt-1 text-xs text-slate-500 px-1">
-                                                <span>0:00</span>
-                                                <span id="videoEndTime">0:00</span>
+                                            <div id="timeMarkers" class="flex justify-between mt-1 text-xs text-slate-500 px-1">
+                                                <!-- Markers will be generated dynamically -->
                                             </div>
                                         </div>
                                     </div>
@@ -1693,6 +1712,11 @@
         let dragStartX = 0; // Mouse X position when drag started
         let dragStartClipStart = 0; // Clip start time when drag started
         let dragStartClipEnd = 0; // Clip end time when drag started
+        
+        // Zoom state
+        let zoomLevel = 1; // 1 = full video, higher = zoomed in
+        let timelineViewStart = 0; // Start time of visible timeline window
+        let timelineViewEnd = 0; // End time of visible timeline window
 
         // Clip Suggestions Modal Functions
         async function handleClipSuggestions() {
@@ -1920,6 +1944,11 @@
                 }
             }
             
+            // Reset zoom for new clip set
+            zoomLevel = 1;
+            timelineViewStart = 0;
+            timelineViewEnd = videoDuration;
+            
             // Show the first clip
             showClip(0);
             
@@ -2018,6 +2047,16 @@
                 console.warn('Clip duration exceeded 6 minutes, adjusted to 6 minutes');
             }
             
+            // Initialize zoom view only if not already set (first clip)
+            if (timelineViewStart === 0 && timelineViewEnd === 0) {
+                timelineViewStart = 0;
+                timelineViewEnd = videoDuration;
+                zoomLevel = 1;
+            } else {
+                // Maintain zoom level but update view to center on new clip
+                updateZoomView();
+            }
+            
             // Update timeline UI
             updateTimelineUI();
             
@@ -2032,15 +2071,16 @@
         }
 
         function updateTimelineUI() {
-            const startPercent = (clipStartTime / videoDuration) * 100;
-            const endPercent = (clipEndTime / videoDuration) * 100;
+            const viewDuration = timelineViewEnd - timelineViewStart;
+            const startPercent = ((clipStartTime - timelineViewStart) / viewDuration) * 100;
+            const endPercent = ((clipEndTime - timelineViewStart) / viewDuration) * 100;
             const widthPercent = endPercent - startPercent;
             
-            console.log(`Timeline: start=${clipStartTime}s (${startPercent.toFixed(1)}%), end=${clipEndTime}s (${endPercent.toFixed(1)}%), duration=${videoDuration}s`);
+            console.log(`Timeline: start=${clipStartTime}s (${startPercent.toFixed(1)}%), end=${clipEndTime}s (${endPercent.toFixed(1)}%), view=${timelineViewStart}-${timelineViewEnd}s, zoom=${zoomLevel}x`);
             
             const clipSegment = document.getElementById('clipSegment');
-            clipSegment.style.left = `${startPercent}%`;
-            clipSegment.style.width = `${widthPercent}%`;
+            clipSegment.style.left = `${Math.max(0, startPercent)}%`;
+            clipSegment.style.width = `${Math.min(100, widthPercent)}%`;
             
             // Update reset button visibility
             const resetBtn = document.getElementById('resetClipBtn');
@@ -2049,6 +2089,73 @@
                 resetBtn.style.opacity = hasChanges ? '1' : '0.5';
                 resetBtn.disabled = !hasChanges;
             }
+            
+            // Update time markers
+            updateTimeMarkers();
+        }
+        
+        function updateTimeMarkers() {
+            const markersContainer = document.getElementById('timeMarkers');
+            if (!markersContainer) return;
+            
+            const formatTime = (seconds) => {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            };
+            
+            const viewDuration = timelineViewEnd - timelineViewStart;
+            const markerCount = 5; // Show 5 time markers
+            const markers = [];
+            
+            for (let i = 0; i <= markerCount; i++) {
+                const time = timelineViewStart + (viewDuration * i / markerCount);
+                markers.push(`<span>${formatTime(Math.round(time))}</span>`);
+            }
+            
+            markersContainer.innerHTML = markers.join('');
+        }
+        
+        function zoomIn() {
+            if (zoomLevel >= 8) return; // Max 8x zoom
+            
+            zoomLevel *= 2;
+            updateZoomView();
+        }
+        
+        function zoomOut() {
+            if (zoomLevel <= 1) return; // Min 1x zoom (full video)
+            
+            zoomLevel /= 2;
+            updateZoomView();
+        }
+        
+        function resetZoom() {
+            zoomLevel = 1;
+            updateZoomView();
+        }
+        
+        function updateZoomView() {
+            if (zoomLevel === 1) {
+                // Full video view
+                timelineViewStart = 0;
+                timelineViewEnd = videoDuration;
+            } else {
+                // Zoomed view - center on current clip
+                const clipCenter = (clipStartTime + clipEndTime) / 2;
+                const viewDuration = videoDuration / zoomLevel;
+                
+                timelineViewStart = Math.max(0, clipCenter - viewDuration / 2);
+                timelineViewEnd = Math.min(videoDuration, timelineViewStart + viewDuration);
+                
+                // Adjust if we hit the end
+                if (timelineViewEnd === videoDuration) {
+                    timelineViewStart = Math.max(0, videoDuration - viewDuration);
+                }
+            }
+            
+            updateTimelineUI();
+            updateTimeLabels();
         }
 
         function setupTimelineDragHandlers() {
@@ -2098,7 +2205,8 @@
                 const rect = timelineBar.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const percent = Math.max(0, Math.min(1, x / rect.width));
-                const newTime = Math.round(percent * videoDuration);
+                const viewDuration = timelineViewEnd - timelineViewStart;
+                const newTime = Math.round(timelineViewStart + (percent * viewDuration));
                 
                 if (dragType === 'start') {
                     // Don't allow start to go past end (keep 1 second minimum)
