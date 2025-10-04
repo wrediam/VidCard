@@ -441,7 +441,19 @@
                                                             <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
                                                         </svg>
                                                     </button>
-                                                    <div class="text-xs text-slate-600 font-medium">Timeline Controls</div>
+                                                    <div class="h-6 w-px bg-slate-300"></div>
+                                                    <button onclick="setInPoint()" class="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 rounded text-white text-xs font-semibold transition shadow-sm flex items-center gap-1.5" title="Set start point to current playhead position">
+                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
+                                                        </svg>
+                                                        Set In
+                                                    </button>
+                                                    <button onclick="setOutPoint()" class="px-3 py-1.5 bg-red-500 hover:bg-red-600 rounded text-white text-xs font-semibold transition shadow-sm flex items-center gap-1.5" title="Set end point to current playhead position">
+                                                        Set Out
+                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
+                                                        </svg>
+                                                    </button>
                                                 </div>
                                                 <div class="flex items-center gap-2">
                                                     <button onclick="zoomOut()" class="px-2 py-1 bg-slate-200 hover:bg-slate-300 rounded text-xs font-medium transition">
@@ -2498,6 +2510,92 @@
             saveClipEdit();
             
             showToast('Reset to AI suggestion', 'info');
+        }
+
+        function setInPoint() {
+            if (!ytPlayer || !ytPlayer.getCurrentTime) {
+                showToast('Player not ready. Please wait for video to load.', 'warning');
+                return;
+            }
+            
+            const currentTime = Math.round(ytPlayer.getCurrentTime());
+            
+            // Validate: In point must be before Out point (keep 1 second minimum)
+            if (currentTime >= clipEndTime - 1) {
+                showToast('In point must be at least 1 second before Out point', 'warning');
+                return;
+            }
+            
+            // Validate: Clip duration cannot exceed 6 minutes (360 seconds)
+            if (clipEndTime - currentTime > 360) {
+                showToast('Clip duration cannot exceed 6 minutes. Adjust Out point first.', 'warning');
+                return;
+            }
+            
+            // Set the start time to current playhead position
+            clipStartTime = currentTime;
+            
+            // Update all UI elements
+            updateTimelineUI();
+            updateTimeLabels();
+            updateClipEmbed();
+            
+            // Save the edit
+            saveClipEdit();
+            
+            const formatTime = (seconds) => {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            };
+            
+            showToast(`In point set to ${formatTime(currentTime)}`, 'success');
+        }
+
+        function setOutPoint() {
+            if (!ytPlayer || !ytPlayer.getCurrentTime) {
+                showToast('Player not ready. Please wait for video to load.', 'warning');
+                return;
+            }
+            
+            const currentTime = Math.round(ytPlayer.getCurrentTime());
+            
+            // Validate: Out point must be after In point (keep 1 second minimum)
+            if (currentTime <= clipStartTime + 1) {
+                showToast('Out point must be at least 1 second after In point', 'warning');
+                return;
+            }
+            
+            // Validate: Clip duration cannot exceed 6 minutes (360 seconds)
+            if (currentTime - clipStartTime > 360) {
+                showToast('Clip duration cannot exceed 6 minutes. Adjust In point first.', 'warning');
+                return;
+            }
+            
+            // Validate: Out point cannot exceed video duration
+            if (currentTime > videoDuration) {
+                showToast('Out point cannot exceed video duration', 'warning');
+                return;
+            }
+            
+            // Set the end time to current playhead position
+            clipEndTime = currentTime;
+            
+            // Update all UI elements
+            updateTimelineUI();
+            updateTimeLabels();
+            updateClipEmbed();
+            
+            // Save the edit
+            saveClipEdit();
+            
+            const formatTime = (seconds) => {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            };
+            
+            showToast(`Out point set to ${formatTime(currentTime)}`, 'success');
         }
 
         async function downloadClip() {
